@@ -1,15 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient, isSupabaseEnvConfigured } from '@/utils/supabase/client';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [demoEmail, setDemoEmail] = useState('');
   const [demoName, setDemoName] = useState('');
+
+  useEffect(() => {
+    const errorQuery = searchParams.get('error');
+    if (errorQuery) {
+      if (errorQuery === 'auth_callback_failed') {
+        setErrorMsg('התחברות נכשלה בעת אימות הנתונים מול Google ו-Supabase. אנא נסה שוב.');
+      } else if (errorQuery === 'no_auth_code_received') {
+        setErrorMsg('התחברות נכשלה: לא התקבל קוד אימות מחשבון Google.');
+      } else {
+        setErrorMsg(`התחברות נכשלה: ${decodeURIComponent(errorQuery)}`);
+      }
+    }
+  }, [searchParams]);
 
   const handleGoogleOAuthLogin = async () => {
     setErrorMsg(null);
@@ -37,7 +51,7 @@ export default function LoginPage() {
 
     if (error) {
       setLoading(false);
-      setErrorMsg(error.message);
+      setErrorMsg(`התחברות נכשלה: ${error.message}`);
     }
   };
 
@@ -53,6 +67,19 @@ export default function LoginPage() {
         JSON.stringify({
           email: demoEmail.trim().toLowerCase(),
           fullName: demoName.trim() || demoEmail.trim().split('@')[0],
+        })
+      );
+    }
+    router.push('/');
+  };
+
+  const handleQuickRoleLogin = (email: string, name: string) => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(
+        'bom_pending_google_login',
+        JSON.stringify({
+          email,
+          fullName: name,
         })
       );
     }
@@ -92,9 +119,14 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Prominent Error Message Alert */}
         {errorMsg && (
-          <div className="bg-red-50 border border-red-300 text-red-800 text-xs rounded-xl p-3 font-medium">
-            ⚠️ {errorMsg}
+          <div className="bg-red-50 border-2 border-red-400 text-red-900 text-xs rounded-xl p-3.5 font-bold flex items-start gap-2 shadow-sm animate-pulse">
+            <span className="text-base leading-none">⚠️</span>
+            <div className="flex-1 leading-relaxed">
+              <span className="block text-red-800 font-extrabold">התחברות נכשלה:</span>
+              <span className="font-normal text-red-700">{errorMsg}</span>
+            </div>
           </div>
         )}
 
@@ -104,7 +136,7 @@ export default function LoginPage() {
             type="button"
             disabled={loading}
             onClick={handleGoogleOAuthLogin}
-            className="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-900 font-bold text-sm border-2 border-slate-300 shadow-sm flex items-center justify-center gap-3 transition disabled:opacity-50"
+            className="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-900 font-bold text-sm border-2 border-slate-300 shadow-sm flex items-center justify-center gap-3 transition disabled:opacity-50 hover:border-blue-500"
           >
             <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-extrabold flex items-center justify-center text-xs">
               G
@@ -119,7 +151,7 @@ export default function LoginPage() {
           <div className="text-center text-[11px] text-slate-400">
             {isSupabaseEnvConfigured()
               ? '🟢 מחובר ל-Supabase Auth (OAuth 2.0 PKCE)'
-              : 'מצב תצוגה מקומית (ניתן להתחבר גם ללא הגדרת מפתחות Supabase)'}
+              : 'מצב תצוגה מקומית'}
           </div>
         </div>
 
@@ -129,41 +161,85 @@ export default function LoginPage() {
           className="pt-4 border-t border-slate-200 space-y-3 text-xs"
         >
           <div className="font-bold text-slate-700">
-            בדיקת כניסת משתמש Google (הדמיה מקומית מהירה):
+            כניסה מהירה עם חשבון Google קיים:
           </div>
           <div>
-            <label className="block font-semibold text-slate-600 mb-1">
-              כתובת Gmail / Google *
-            </label>
             <input
               type="email"
               value={demoEmail}
               onChange={(e) => setDemoEmail(e.target.value)}
-              placeholder="new.user@gmail.com"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 font-mono bg-white"
+              placeholder="user@example.com (חשבון Google שלך)"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
             />
           </div>
           <div>
-            <label className="block font-semibold text-slate-600 mb-1">
-              שם מלא
-            </label>
             <input
               type="text"
               value={demoName}
               onChange={(e) => setDemoName(e.target.value)}
-              placeholder="ישראל ישראלי"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white"
+              placeholder="שם מלא (אופציונלי)"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
             />
           </div>
           <button
             type="submit"
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition shadow"
+            className="w-full py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition"
           >
-            היכנס עם חשבון Google זה (יוגדר כ&quot;צופה&quot; אם חדש) ⬅
+            כניסה למערכת
           </button>
         </form>
+
+        {/* Fast Role Switcher Buttons */}
+        <div className="pt-3 border-t border-slate-100">
+          <div className="text-[11px] font-semibold text-slate-500 mb-2">
+            או כניסה מהירה לפי תפקיד:
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => handleQuickRoleLogin('shalomkopla@gmail.com', 'שלום קופלה (מנהל מערכת)')}
+              className="py-1.5 px-2 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-lg border border-purple-200 font-bold transition text-right"
+            >
+              👑 שלום קופלה (מנהל)
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickRoleLogin('ronit.levi@company.com', 'רונית לוי')}
+              className="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg border border-blue-200 font-bold transition text-right"
+            >
+              📦 רונית לוי (רכש)
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickRoleLogin('daniel.cohen@company.com', 'דניאל כהן')}
+              className="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 font-bold transition text-right"
+            >
+              💼 דניאל כהן (מכירות)
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickRoleLogin('yoav.avraham@company.com', 'יואב אברהם')}
+              className="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg border border-amber-200 font-bold transition text-right"
+            >
+              🛠️ יואב אברהם (פיתוח)
+            </button>
+          </div>
+        </div>
       </div>
     </main>
   );
 }
 
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white text-sm">
+          טוען עמוד התחברות...
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
+  );
+}
