@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 import { ConfiguratorState } from '@/types/configurator';
 import { INITIAL_STATE } from '@/data/initialData';
 
@@ -14,15 +14,16 @@ export const isSupabaseConfigured = Boolean(
     !supabaseUrl.includes('your-project-id')
 );
 
-export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
+// Use createBrowserClient from @supabase/ssr so cookie sessions are shared with middleware
+export const supabase = isSupabaseConfigured
+  ? createBrowserClient(supabaseUrl, supabaseAnonKey)
   : null;
 
 export async function loadConfiguratorState(): Promise<{
   state: ConfiguratorState;
   source: 'supabase' | 'localStorage' | 'seed';
 }> {
-  // 1. Try Supabase first if configured (with a safe 5-second timeout)
+  // 1. Try Supabase first if configured
   if (supabase) {
     try {
       const fetchPromise = supabase
@@ -134,7 +135,7 @@ export async function signInWithGoogleOAuth(): Promise<{ redirected: boolean; er
 export async function getAuthenticatedGoogleUser(): Promise<{
   email: string;
   fullName: string;
-  role?: string;
+  role: string;
 } | null> {
   if (!supabase) return null;
   try {
@@ -148,18 +149,22 @@ export async function getAuthenticatedGoogleUser(): Promise<{
 
     if (!user || !user.email) return null;
 
+    const emailLower = user.email.toLowerCase();
+
+    // Query public.app_users for the user's role
     const { data: profile } = await supabase
       .from('app_users')
       .select('email, full_name, role')
-      .eq('email', user.email.toLowerCase())
+      .eq('email', emailLower)
       .maybeSingle();
 
     return {
-      email: user.email.toLowerCase(),
+      email: emailLower,
       fullName:
         profile?.full_name ||
         user.user_metadata?.full_name ||
-        user.email.split('@')[0],
+        user.user_metadata?.name ||
+        emailLower.split('@')[0],
       role: profile?.role || 'manager',
     };
   } catch {

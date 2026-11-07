@@ -216,7 +216,7 @@ export default function HomePage() {
 
       // Check real Supabase Auth Google user or pending local /login session
       const supaUser = await getAuthenticatedGoogleUser();
-      let pendingLogin: { email: string; fullName: string } | null = supaUser;
+      let pendingLogin: { email: string; fullName: string; role?: string } | null = supaUser;
 
       if (!pendingLogin && typeof window !== 'undefined') {
         const rawPending = window.localStorage.getItem('bom_pending_google_login');
@@ -241,13 +241,16 @@ export default function HomePage() {
           hydratedUsers[existingIdx] = { ...existing, lastSignInAt: ts };
           setActiveUserEmail(existing.email);
           setRole(existing.role);
+          if (existing.role === 'manager') {
+            setActiveScreen('admin');
+          }
         } else {
           // New Google user -> auto-assign 'viewer' (צופה)
           const newUser: AppUser = {
             id: `USR-${100 + hydratedUsers.length + 1}`,
             email: emailLower,
             fullName: pendingLogin.fullName || emailLower.split('@')[0],
-            role: 'viewer',
+            role: (pendingLogin.role as RoleType) || 'viewer',
             provider: 'google',
             active: true,
             createdAt: ts,
@@ -256,9 +259,12 @@ export default function HomePage() {
           };
           hydratedUsers = [newUser, ...hydratedUsers];
           setActiveUserEmail(newUser.email);
-          setRole('viewer');
+          setRole(newUser.role);
+          if (newUser.role === 'manager') {
+            setActiveScreen('admin');
+          }
           setAuthBannerMsg(
-            `משתמש Google חדש (${newUser.email}) התחבר למערכת והוגדר אוטומטית כ"צופה" (Viewer).`
+            `משתמש Google מחובר: ${newUser.fullName} (${newUser.email}) בתפקיד: ${ROLE_LABELS_HE[newUser.role]}`
           );
         }
       }
@@ -917,48 +923,30 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Google Sign-In + Role Switcher + Reset */}
+          {/* Connected User Profile Display & Sign Out */}
           <div className="flex flex-wrap items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700">
-            <button
-              type="button"
-              onClick={() => setGoogleModalOpen(true)}
-              className="bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg shadow flex items-center gap-2 border border-slate-300 transition"
-            >
-              <span className="text-blue-600 font-extrabold text-sm">G</span>
+            <div className="bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 shadow-inner">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-extrabold text-[11px] flex items-center justify-center">
+                G
+              </span>
               <span>
                 {activeUserObj
                   ? `${activeUserObj.fullName} (${activeUserObj.email})`
-                  : 'התחברות עם Google'}
+                  : activeUserEmail}
               </span>
-            </button>
-            <span className="text-xs text-slate-300 font-medium">תפקיד:</span>
-            <select
-              value={role}
-              onChange={(e) => {
-                const newRole = e.target.value as RoleType;
-                setRole(newRole);
-                const matchingUser = usersList.find((u) => u.role === newRole);
-                if (matchingUser) setActiveUserEmail(matchingUser.email);
-                if (newRole !== 'manager' && activeScreen === 'admin') {
-                  setActiveScreen('list');
-                }
-              }}
-              className="bg-slate-900 text-white text-xs font-semibold border border-slate-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-400"
+              <span className="text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full">
+                {ROLE_LABELS_HE[role]}
+              </span>
+            </div>
+
+            <a
+              href="/auth/signout"
+              title="התנתקות מהחשבון"
+              className="text-xs bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800/60 px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1"
             >
-              <option value="sales">איש מכירות (דניאל כהן)</option>
-              <option value="procurement">איש רכש / תפ&quot;י (רונית לוי)</option>
-              <option value="dev">איש פיתוח / הנדסה (יואב אברהם)</option>
-              <option value="viewer">צופה / שירות לקוחות (מיכל שפירא)</option>
-              <option value="manager">מנהל מערכת (אלון גולן)</option>
-            </select>
-            <button
-              type="button"
-              onClick={handleResetDemoData}
-              title="איפוס נתונים לברירת המחדל"
-              className="text-[11px] bg-slate-700 hover:bg-slate-600 text-slate-200 px-2.5 py-1.5 rounded-lg font-medium transition"
-            >
-              ↺ איפוס נתונים
-            </button>
+              <span>🚪</span>
+              <span>התנתק</span>
+            </a>
           </div>
         </div>
       </header>
