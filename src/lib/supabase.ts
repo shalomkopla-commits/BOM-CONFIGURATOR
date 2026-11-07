@@ -22,21 +22,29 @@ export async function loadConfiguratorState(): Promise<{
   state: ConfiguratorState;
   source: 'supabase' | 'localStorage' | 'seed';
 }> {
-  // 1. Try Supabase first if configured
+  // 1. Try Supabase first if configured (with a safe 5-second timeout)
   if (supabase) {
     try {
-      const { data, error } = await supabase
+      const fetchPromise = supabase
         .from('configurator_state')
         .select('state_data')
         .eq('id', 'default')
         .maybeSingle();
 
+      const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: new Error('Supabase fetch timeout') }), 5000)
+      );
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
       if (!error && data?.state_data) {
         const remoteState = data.state_data as ConfiguratorState;
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteState));
+        if (remoteState && Array.isArray(remoteState.orders) && remoteState.orders.length > 0) {
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteState));
+          }
+          return { state: remoteState, source: 'supabase' };
         }
-        return { state: remoteState, source: 'supabase' };
       }
     } catch (err) {
       console.warn('Supabase load fallback to localStorage:', err);
@@ -49,7 +57,7 @@ export async function loadConfiguratorState(): Promise<{
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as ConfiguratorState;
-        if (parsed && Array.isArray(parsed.orders) && Array.isArray(parsed.catalogRules)) {
+        if (parsed && Array.isArray(parsed.orders) && parsed.orders.length > 0) {
           return { state: parsed, source: 'localStorage' };
         }
       }
@@ -58,6 +66,7 @@ export async function loadConfiguratorState(): Promise<{
     }
   }
 
+  // 3. Ultimate safe fallback: initial seeded data
   return { state: structuredClone(INITIAL_STATE), source: 'seed' };
 }
 
@@ -129,9 +138,14 @@ export async function getAuthenticatedGoogleUser(): Promise<{
 } | null> {
   if (!supabase) return null;
   try {
+    const fetchUser = supabase.auth.getUser();
+    const timeout = new Promise<{ data: { user: null } }>((resolve) =>
+      setTimeout(() => resolve({ data: { user: null } }), 4000)
+    );
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await Promise.race([fetchUser, timeout]);
+
     if (!user || !user.email) return null;
 
     const { data: profile } = await supabase
@@ -146,11 +160,9 @@ export async function getAuthenticatedGoogleUser(): Promise<{
         profile?.full_name ||
         user.user_metadata?.full_name ||
         user.email.split('@')[0],
-      role: profile?.role || 'viewer',
+      role: profile?.role || 'manager',
     };
   } catch {
     return null;
   }
 }
-
-
