@@ -56,6 +56,7 @@ export default function HomePage() {
   >('detail');
   const [selectedOrderId, setSelectedOrderId] =
     useState<string>('ORD-2026-102');
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState<boolean>(false);
 
   // --- Screen 1: Orders List Filters & Sort ---
   const [kpiFilter, setKpiFilter] = useState<'all' | 'open' | 'dev' | 'closed'>(
@@ -816,15 +817,15 @@ export default function HomePage() {
 
   const getStatusBadge = (status: OrderStatus) => {
     const map: Record<OrderStatus, string> = {
-      'ממתין לאישור': 'bg-amber-100 text-amber-800 border-amber-300',
-      מאושר: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-      'ממתין לפיתוח': 'bg-orange-500 text-white border-orange-600 shadow-sm',
-      סגורה: 'bg-slate-200 text-slate-700 border-slate-300',
-      בטיפול: 'bg-blue-100 text-blue-800 border-blue-300',
-      מבוטלת: 'bg-red-100 text-red-700 border-red-300 line-through',
+      'ממתין לאישור': 'bg-amber-50 text-amber-700 border-amber-200/90',
+      מאושר: 'bg-emerald-50 text-emerald-700 border-emerald-200/90',
+      'ממתין לפיתוח': 'bg-orange-100 text-orange-800 border-orange-300 font-bold',
+      סגורה: 'bg-slate-100 text-slate-600 border-slate-200',
+      בטיפול: 'bg-blue-50 text-blue-700 border-blue-200/90',
+      מבוטלת: 'bg-rose-50 text-rose-700 border-rose-200 line-through',
     };
-    return `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-      map[status] || ''
+    return `inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+      map[status] || 'bg-slate-50 text-slate-700 border-slate-200'
     }`;
   };
 
@@ -851,103 +852,160 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900">
-      {/* TOP BAR */}
+      {/* TOP BAR WITH SHUTTER ACCORDION */}
       <header className="bg-slate-900 text-white border-b border-slate-700 sticky top-0 z-50 shadow-md">
-        <div className="max-w-[1640px] mx-auto px-6 py-3 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-lg shadow-inner">
-              ⚙️
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold tracking-tight">
-                  קונפיגורטור מוצר וניהול BOM
-                </h1>
-                <span className="text-xs bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full">
-                  Next.js • Desktop RTL
-                </span>
-                <span
-                  className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${
-                    isSupabaseConfigured && storageSource === 'supabase'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
-                      : 'bg-slate-800 text-slate-300 border-slate-600'
-                  }`}
-                >
-                  {isSupabaseConfigured && storageSource === 'supabase'
-                    ? '🟢 מחובר ל-Supabase'
-                    : '💾 שמירה מקומית (מוכן ל-Supabase & Vercel)'}
-                </span>
+        {/* Shutter Content (Collapsible) */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            isHeaderCollapsed
+              ? 'max-h-0 opacity-0'
+              : 'max-h-[160px] opacity-100'
+          }`}
+        >
+          <div className="max-w-[1640px] mx-auto px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-lg shadow-inner">
+                ⚙️
               </div>
-              <p className="text-xs text-slate-400">
-                משתמש פעיל: <strong className="text-slate-200">{currentUserLabel}</strong> | ייצוא BOM ל-Excel, תמונות מכלולים, Metadata מלא וסל מיחזור
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg font-bold tracking-tight">
+                    קונפיגורטור מוצר וניהול BOM
+                  </h1>
+                  <span className="text-xs bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full">
+                    Next.js • Desktop RTL
+                  </span>
+                  <span
+                    className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${
+                      isSupabaseConfigured && storageSource === 'supabase'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                        : 'bg-slate-800 text-slate-300 border-slate-600'
+                    }`}
+                  >
+                    {isSupabaseConfigured && storageSource === 'supabase'
+                      ? '🟢 מחובר ל-Supabase'
+                      : '💾 שמירה מקומית (מוכן ל-Supabase & Vercel)'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  משתמש פעיל: <strong className="text-slate-200">{currentUserLabel}</strong> | ייצוא BOM ל-Excel, תמונות מכלולים, Metadata מלא וסל מיחזור
+                </p>
+              </div>
             </div>
-          </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700">
-            <button
-              type="button"
-              onClick={() => setActiveScreen('list')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeScreen === 'list' || activeScreen === 'detail'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              1. הזמנות ו-BOM
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveScreen('new')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeScreen === 'new'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              2. + פתיחת הזמנה חדשה
-            </button>
-            {role === 'manager' && (
+            {/* Navigation Tabs */}
+            <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700">
               <button
                 type="button"
-                onClick={() => setActiveScreen('admin')}
+                onClick={() => setActiveScreen('list')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-                  activeScreen === 'admin'
-                    ? 'bg-purple-600 text-white shadow'
-                    : 'text-purple-300 hover:text-white'
+                  activeScreen === 'list' || activeScreen === 'detail'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-300 hover:text-white'
                 }`}
               >
-                ⚙️ ניהול מערכת, היררכיות וחוקים
+                1. הזמנות ו-BOM
               </button>
-            )}
-          </div>
-
-          {/* Connected User Profile Display & Sign Out */}
-          <div className="flex flex-wrap items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700">
-            <div className="bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 shadow-inner">
-              <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-extrabold text-[11px] flex items-center justify-center">
-                G
-              </span>
-              <span>
-                {activeUserObj
-                  ? `${activeUserObj.fullName} (${activeUserObj.email})`
-                  : activeUserEmail}
-              </span>
-              <span className="text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full">
-                {ROLE_LABELS_HE[role]}
-              </span>
+              <button
+                type="button"
+                onClick={() => setActiveScreen('new')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  activeScreen === 'new'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                2. + פתיחת הזמנה חדשה
+              </button>
+              {role === 'manager' && (
+                <button
+                  type="button"
+                  onClick={() => setActiveScreen('admin')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    activeScreen === 'admin'
+                      ? 'bg-purple-600 text-white shadow'
+                      : 'text-purple-300 hover:text-white'
+                  }`}
+                >
+                  ⚙️ ניהול מערכת, היררכיות וחוקים
+                </button>
+              )}
             </div>
 
-            <a
-              href="/auth/signout"
-              title="התנתקות מהחשבון"
-              className="text-xs bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800/60 px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1"
-            >
-              <span>🚪</span>
-              <span>התנתק</span>
-            </a>
+            {/* Connected User Profile Display & Sign Out */}
+            <div className="flex flex-wrap items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700">
+              <div className="bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 shadow-inner">
+                <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-extrabold text-[11px] flex items-center justify-center">
+                  G
+                </span>
+                <span>
+                  {activeUserObj
+                    ? `${activeUserObj.fullName} (${activeUserObj.email})`
+                    : activeUserEmail}
+                </span>
+                <span className="text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full">
+                  {ROLE_LABELS_HE[role]}
+                </span>
+              </div>
+
+              <a
+                href="/auth/signout"
+                title="התנתקות מהחשבון"
+                className="text-xs bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800/60 px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1"
+              >
+                <span>🚪</span>
+                <span>התנתק</span>
+              </a>
+            </div>
           </div>
+        </div>
+
+        {/* Collapsed Mini Summary Bar */}
+        {isHeaderCollapsed && (
+          <div className="max-w-[1640px] mx-auto px-6 py-1.5 flex items-center justify-between text-xs bg-slate-950/80 border-t border-slate-800/60">
+            <div className="flex items-center gap-3">
+              <span className="font-bold text-slate-200 text-xs flex items-center gap-1.5">
+                <span>⚙️</span> קונפיגורטור מוצר וניהול BOM
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="text-blue-400 font-semibold">
+                {activeScreen === 'list' || activeScreen === 'detail'
+                  ? '1. הזמנות ו-BOM'
+                  : activeScreen === 'new'
+                  ? '2. פתיחת הזמנה חדשה'
+                  : 'ניהול מערכת'}
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="text-slate-400 text-[11px]">
+                מחובר:{' '}
+                <strong className="text-slate-200">{currentUserLabel}</strong>
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-400">
+              תריס עליון מכווץ לחסכון בשטח מסך
+            </div>
+          </div>
+        )}
+
+        {/* Shutter Toggle Tab Button */}
+        <div className="flex justify-center -mb-3 relative z-10">
+          <button
+            type="button"
+            onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
+            className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-0.5 rounded-b-xl border-x border-b border-slate-600 text-[11px] font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
+            title={
+              isHeaderCollapsed
+                ? 'פתח תריס סרגל עליון'
+                : 'כווץ תריס סרגל עליון'
+            }
+          >
+            <span>{isHeaderCollapsed ? '▼' : '▲'}</span>
+            <span>
+              {isHeaderCollapsed
+                ? 'פתח תריס סרגל עליון'
+                : 'כווץ תריס סרגל עליון'}
+            </span>
+          </button>
         </div>
       </header>
 
@@ -1137,60 +1195,60 @@ export default function HomePage() {
                     </span>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-right text-sm">
-                      <thead className="bg-slate-50 text-slate-600 text-xs uppercase border-b border-slate-200 select-none">
+                    <table className="w-full text-right text-xs">
+                      <thead className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-200 select-none">
                         <tr>
                           <th
                             onClick={() => handleSortTable('id')}
-                            className="py-3 px-4 cursor-pointer hover:bg-slate-100"
+                            className="py-2.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors"
                           >
-                            מס&apos; הזמנה ⇅
-                          </th>
-                          <th
-                            onClick={() => handleSortTable('customer')}
-                            className="py-3 px-4 cursor-pointer hover:bg-slate-100"
-                          >
-                            לקוח / איש קשר ⇅
+                            הזמנה ולקוח ⇅
                           </th>
                           <th
                             onClick={() => handleSortTable('systemName')}
-                            className="py-3 px-4 cursor-pointer hover:bg-slate-100"
+                            className="py-2.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors"
                           >
                             סוג מערכת ⇅
                           </th>
-                          <th className="py-3 px-4">
+                          <th className="py-2.5 px-3">
                             דרישות עיקריות (הספק / מוקד / מתח)
                           </th>
                           <th
                             onClick={() => handleSortTable('env')}
-                            className="py-3 px-4 cursor-pointer hover:bg-slate-100"
+                            className="py-2.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors"
                           >
                             תנאי סביבה ושימוש ⇅
                           </th>
                           <th
                             onClick={() => handleSortTable('deliveryDate')}
-                            className="py-3 px-4 cursor-pointer hover:bg-slate-100"
+                            className="py-2.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors whitespace-nowrap"
                           >
                             תאריך אספקה ⇅
                           </th>
                           <th
-                            onClick={() => handleSortTable('createdAt')}
-                            className="py-3 px-4 cursor-pointer hover:bg-slate-100"
+                            onClick={() => handleSortTable('updatedAt')}
+                            className="py-2.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors"
                           >
-                            Metadata (פתיחה ועדכון) ⇅
+                            עדכון ⇅
                           </th>
                           <th
                             onClick={() => handleSortTable('status')}
-                            className="py-3 px-4 cursor-pointer hover:bg-slate-100"
+                            className="py-2.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors text-center"
                           >
                             מצב הזמנה ⇅
                           </th>
-                          <th className="py-3 px-4 text-center">פעולות</th>
+                          <th className="py-2.5 px-3 text-center w-14">פעולות</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200 text-xs">
+                      <tbody className="divide-y divide-slate-100 text-xs">
                         {filteredOrders.map((o) => {
                           const isDev = o.status === 'ממתין לפיתוח';
+                          const isCustomFocal =
+                            o.focal.includes('אחר') ||
+                            o.focal.includes('זום') ||
+                            o.focal.includes('מיוצב');
+                          const isCustomEnv = o.env.includes('אחר');
+
                           return (
                             <tr
                               key={o.id}
@@ -1198,79 +1256,154 @@ export default function HomePage() {
                                 setSelectedOrderId(o.id);
                                 setActiveScreen('detail');
                               }}
-                              className={`cursor-pointer hover:bg-blue-50/50 transition ${
-                                isDev ? 'custom-orange-row' : ''
+                              className={`cursor-pointer hover:bg-blue-50/40 transition group h-[46px] ${
+                                isDev
+                                  ? 'bg-amber-50/25 hover:bg-amber-100/35 border-r-4 border-r-orange-500'
+                                  : ''
                               }`}
                             >
-                              <td className="py-3.5 px-4 font-mono font-bold text-blue-700">
-                                {o.id}
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <div className="font-bold text-slate-900">
-                                  {o.customer}
+                              {/* 1. הזמנה ולקוח */}
+                              <td className="py-2 px-3 whitespace-nowrap">
+                                <div className="font-mono font-bold text-xs text-blue-700 group-hover:text-blue-800 leading-tight">
+                                  {o.id}
                                 </div>
-                                <div className="text-slate-500">
-                                  {o.contact}
+                                <div className="text-[11px] text-slate-500 truncate max-w-[210px] leading-tight mt-0.5">
+                                  <span className="font-semibold text-slate-800">
+                                    {o.customer}
+                                  </span>
+                                  {o.contact && (
+                                    <span className="text-slate-400">
+                                      {' '}• {o.contact}
+                                    </span>
+                                  )}
                                 </div>
                               </td>
-                              <td className="py-3.5 px-4 font-semibold text-slate-800">
-                                <div>{o.systemName}</div>
-                                <div className="text-[11px] text-slate-500">
-                                  {o.channels} ערוצים • {o.psuCount} ספקים
+
+                              {/* 2. סוג מערכת */}
+                              <td className="py-2 px-3 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-slate-900">
+                                    {o.systemName}
+                                  </span>
+                                  <span className="text-[11px] text-slate-500 font-normal">
+                                    ({o.channels} ערוצים, {o.psuCount} ספקים)
+                                  </span>
                                 </div>
                               </td>
-                              <td className="py-3.5 px-4">
-                                <span className="inline-block bg-slate-100 px-2 py-0.5 rounded mr-1">
-                                  {o.power}
-                                </span>
+
+                              {/* 3. דרישות עיקריות */}
+                              <td className="py-2 px-3 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5 text-[11px]">
+                                  <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono font-semibold">
+                                    {o.power}
+                                  </span>
+                                  <span className="text-slate-300">•</span>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded font-semibold ${
+                                      isCustomFocal
+                                        ? 'bg-orange-100 text-orange-950 border border-orange-300 font-bold'
+                                        : 'bg-slate-100 text-slate-700'
+                                    }`}
+                                  >
+                                    {o.focal}
+                                  </span>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono font-semibold">
+                                    {o.voltage}
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* 4. תנאי סביבה ושימוש */}
+                              <td className="py-2 px-3 whitespace-nowrap">
                                 <span
-                                  className={`inline-block px-2 py-0.5 rounded mr-1 ${
-                                    o.focal.includes('אחר')
-                                      ? 'bg-orange-200 text-orange-950 font-bold'
-                                      : 'bg-slate-100'
+                                  className={`font-medium ${
+                                    isCustomEnv
+                                      ? 'text-orange-950 font-bold'
+                                      : 'text-slate-800'
                                   }`}
                                 >
-                                  {o.focal}
-                                </span>
-                                <span className="inline-block bg-slate-100 px-2 py-0.5 rounded">
-                                  {o.voltage}
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <div
-                                  className={
-                                    o.env.includes('אחר')
-                                      ? 'text-orange-900 font-bold'
-                                      : 'text-slate-800'
-                                  }
-                                >
                                   {o.env}
-                                </div>
-                                <div className="text-slate-500">
-                                  שימוש: <strong>{o.usage}</strong>
-                                </div>
+                                </span>
+                                <span className="text-slate-300 mx-1">•</span>
+                                <span className="text-slate-500 text-[11px]">
+                                  {o.usage}
+                                </span>
                               </td>
-                              <td className="py-3.5 px-4 font-mono font-medium">
+
+                              {/* 5. תאריך אספקה */}
+                              <td className="py-2 px-3 whitespace-nowrap font-mono text-xs font-semibold text-slate-700">
                                 {o.deliveryDate}
                               </td>
-                              <td className="py-3.5 px-4 text-[11px] text-slate-600">
-                                <div>
-                                  <span className="text-slate-400">נפתח:</span>{' '}
-                                  <strong>{o.createdBy}</strong> ({o.createdAt})
-                                </div>
-                                <div>
-                                  <span className="text-slate-400">
-                                    עודכן:
-                                  </span>{' '}
-                                  <strong>{o.updatedBy}</strong> ({o.updatedAt})
+
+                              {/* 6. עדכון - שם אחרון ותאריך מקוצר + ענן Tooltip במעבר על ה-i */}
+                              <td className="py-2 px-3 whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1.5 text-xs text-slate-700">
+                                  <span className="font-semibold text-slate-800">
+                                    {o.updatedBy
+                                      ? o.updatedBy.split('(')[0].trim()
+                                      : 'מערכת'}
+                                  </span>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="font-mono text-slate-500 text-[11px]">
+                                    {o.updatedAt
+                                      ? o.updatedAt.split(' ')[0]
+                                      : ''}
+                                  </span>
+
+                                  {/* Tooltip trigger on ℹ️ icon only */}
+                                  <div className="relative group/tip inline-flex items-center justify-center">
+                                    <span className="cursor-pointer text-blue-600 hover:text-blue-800 transition text-xs select-none p-0.5">
+                                      ℹ️
+                                    </span>
+
+                                    {/* Cloud Tooltip on hover */}
+                                    <div className="absolute z-30 bottom-full right-1/2 translate-x-1/2 mb-2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-xl shadow-2xl p-3 w-64 pointer-events-none transition-all border border-slate-700 text-right">
+                                      <div className="font-bold text-amber-300 border-b border-slate-700 pb-1.5 mb-1.5 flex items-center justify-between">
+                                        <span>היסטוריית הזמנה</span>
+                                        <span className="font-mono text-slate-300 text-[10px]">
+                                          {o.id}
+                                        </span>
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        <div className="text-slate-300">
+                                          <span className="text-slate-400 font-medium">
+                                            נפתח ע&quot;י:
+                                          </span>{' '}
+                                          <strong className="text-white">
+                                            {o.createdBy}
+                                          </strong>
+                                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                            {o.createdAt}
+                                          </div>
+                                        </div>
+                                        <div className="border-t border-slate-800 pt-1 text-slate-300">
+                                          <span className="text-slate-400 font-medium">
+                                            עודכן ע&quot;י:
+                                          </span>{' '}
+                                          <strong className="text-white">
+                                            {o.updatedBy}
+                                          </strong>
+                                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                            {o.updatedAt}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-900" />
+                                    </div>
+                                  </div>
                                 </div>
                               </td>
-                              <td className="py-3.5 px-4">
+
+                              {/* 7. מצב הזמנה */}
+                              <td className="py-2 px-3 text-center whitespace-nowrap">
                                 <span className={getStatusBadge(o.status)}>
                                   {o.status}
                                 </span>
                               </td>
-                              <td className="py-3.5 px-4 text-center">
+
+                              {/* 8. פעולות - אייקון עין בלבד */}
+                              <td className="py-2 px-3 text-center whitespace-nowrap">
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -1278,9 +1411,28 @@ export default function HomePage() {
                                     setSelectedOrderId(o.id);
                                     setActiveScreen('detail');
                                   }}
-                                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs shadow-sm"
+                                  title="צפייה ב-BOM ובעץ המוצר"
+                                  className="p-1.5 rounded-md text-slate-500 hover:text-blue-700 hover:bg-blue-100/80 border border-slate-200 hover:border-blue-300 transition shadow-2xs inline-flex items-center justify-center"
                                 >
-                                  צפייה ב-BOM ובעץ ⬅
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                    />
+                                  </svg>
                                 </button>
                               </td>
                             </tr>
