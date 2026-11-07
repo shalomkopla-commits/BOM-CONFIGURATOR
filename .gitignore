@@ -30,3 +30,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+
+.vercel
+.env*
+tools/*.mjs
+tools/*.ts
+tools/*.ps1
+
