@@ -1,6 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr';
-import { ConfiguratorState } from '@/types/configurator';
-import { INITIAL_STATE } from '@/data/initialData';
+import { AppUser, ConfiguratorState } from '@/types/configurator';
+import { INITIAL_STATE, INITIAL_USERS } from '@/data/initialData';
 
 const STORAGE_KEY = 'bom_configurator_state_v8';
 
@@ -32,15 +32,40 @@ export async function loadConfiguratorState(): Promise<{
         .eq('id', 'default')
         .maybeSingle();
 
+      // Fetch live app_users table so any manual insert/update is reflected in real-time
+      const fetchUsersPromise = supabase
+        .from('app_users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
       const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) =>
         setTimeout(() => resolve({ data: null, error: new Error('Supabase fetch timeout') }), 5000)
       );
 
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+      const [stateResult, usersResult] = await Promise.all([
+        Promise.race([fetchPromise, timeoutPromise]),
+        Promise.race([fetchUsersPromise, timeoutPromise]),
+      ]);
 
-      if (!error && data?.state_data) {
-        const remoteState = data.state_data as ConfiguratorState;
+      if (!stateResult.error && stateResult.data?.state_data) {
+        const remoteState = stateResult.data.state_data as ConfiguratorState;
         if (remoteState && Array.isArray(remoteState.orders) && remoteState.orders.length > 0) {
+          // If live app_users rows exist, merge them directly into the state
+          if (usersResult.data && Array.isArray(usersResult.data) && usersResult.data.length > 0) {
+            const liveUsers: AppUser[] = usersResult.data.map((u: any) => ({
+              id: u.id,
+              email: u.email,
+              fullName: u.full_name || u.email.split('@')[0],
+              role: u.role || 'viewer',
+              provider: u.provider || 'google',
+              active: u.active !== false,
+              createdAt: u.created_at || '',
+              lastSignInAt: u.last_sign_in_at || '',
+              updatedBy: u.updated_by || '',
+            }));
+            remoteState.users = liveUsers;
+          }
+
           if (typeof window !== 'undefined') {
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteState));
           }
