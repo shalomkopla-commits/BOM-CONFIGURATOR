@@ -47,30 +47,38 @@ export async function loadConfiguratorState(): Promise<{
         Promise.race([fetchUsersPromise, timeoutPromise]),
       ]);
 
+      let baseState: ConfiguratorState | null = null;
       if (!stateResult.error && stateResult.data?.state_data) {
-        const remoteState = stateResult.data.state_data as ConfiguratorState;
-        if (remoteState && Array.isArray(remoteState.orders) && remoteState.orders.length > 0) {
-          // If live app_users rows exist, merge them directly into the state
-          if (usersResult.data && Array.isArray(usersResult.data) && usersResult.data.length > 0) {
-            const liveUsers: AppUser[] = usersResult.data.map((u: any) => ({
-              id: u.id,
-              email: u.email,
-              fullName: u.full_name || u.email.split('@')[0],
-              role: u.role || 'viewer',
-              provider: u.provider || 'google',
-              active: u.active !== false,
-              createdAt: u.created_at || '',
-              lastSignInAt: u.last_sign_in_at || '',
-              updatedBy: u.updated_by || '',
-            }));
-            remoteState.users = liveUsers;
-          }
-
-          if (typeof window !== 'undefined') {
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteState));
-          }
-          return { state: remoteState, source: 'supabase' };
+        const remote = stateResult.data.state_data as ConfiguratorState;
+        if (remote && Array.isArray(remote.orders) && remote.orders.length > 0) {
+          baseState = remote;
         }
+      }
+
+      // If live app_users rows exist in Supabase, map them directly
+      let liveUsers: AppUser[] | null = null;
+      if (usersResult.data && Array.isArray(usersResult.data) && usersResult.data.length > 0) {
+        liveUsers = usersResult.data.map((u: any) => ({
+          id: u.id,
+          email: u.email,
+          fullName: u.full_name || u.email.split('@')[0],
+          role: u.role || 'viewer',
+          provider: u.provider || 'google',
+          active: u.active !== false,
+          createdAt: u.created_at || '',
+          lastSignInAt: u.last_sign_in_at || '',
+          updatedBy: u.updated_by || '',
+        }));
+      }
+
+      if (baseState) {
+        if (liveUsers && liveUsers.length > 0) {
+          baseState.users = liveUsers;
+        }
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(baseState));
+        }
+        return { state: baseState, source: 'supabase' };
       }
     } catch (err) {
       console.warn('Supabase load fallback to localStorage:', err);
@@ -119,6 +127,27 @@ export async function saveConfiguratorState(
         },
         { onConflict: 'id' }
       );
+
+      // Bi-directional sync: also persist users to public.app_users table
+      if (state.users && state.users.length > 0) {
+        try {
+          const rows = state.users.map((u) => ({
+            id: u.id,
+            email: u.email,
+            full_name: u.fullName,
+            role: u.role,
+            provider: u.provider || 'google',
+            active: u.active !== false,
+            created_at: u.createdAt || new Date().toISOString(),
+            last_sign_in_at: u.lastSignInAt || '',
+            updated_by: u.updatedBy || updatedBy,
+          }));
+          await supabase.from('app_users').upsert(rows, { onConflict: 'id' });
+        } catch (uErr) {
+          console.warn('Failed to upsert to app_users table:', uErr);
+        }
+      }
+
       if (!error) {
         return { syncedToSupabase: true };
       }
