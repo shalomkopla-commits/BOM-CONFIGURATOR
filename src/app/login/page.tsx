@@ -9,8 +9,6 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [demoEmail, setDemoEmail] = useState('');
-  const [demoName, setDemoName] = useState('');
 
   useEffect(() => {
     const errorQuery = searchParams.get('error');
@@ -53,37 +51,6 @@ function LoginContent() {
       setLoading(false);
       setErrorMsg(`התחברות נכשלה: ${error.message}`);
     }
-  };
-
-  const handleDemoGoogleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!demoEmail.trim() || !demoEmail.includes('@')) {
-      setErrorMsg('נא להזין כתובת אימייל תקנית של חשבון Google.');
-      return;
-    }
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(
-        'bom_pending_google_login',
-        JSON.stringify({
-          email: demoEmail.trim().toLowerCase(),
-          fullName: demoName.trim() || demoEmail.trim().split('@')[0],
-        })
-      );
-    }
-    router.push('/');
-  };
-
-  const handleQuickRoleLogin = (email: string, name: string) => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(
-        'bom_pending_google_login',
-        JSON.stringify({
-          email,
-          fullName: name,
-        })
-      );
-    }
-    router.push('/');
   };
 
   return (
@@ -152,77 +119,6 @@ function LoginContent() {
             {isSupabaseEnvConfigured()
               ? '🟢 מחובר ל-Supabase Auth (OAuth 2.0 PKCE)'
               : 'מצב תצוגה מקומית'}
-          </div>
-        </div>
-
-        {/* Quick Demo Google Sign-In */}
-        <form
-          onSubmit={handleDemoGoogleLogin}
-          className="pt-4 border-t border-slate-200 space-y-3 text-xs"
-        >
-          <div className="font-bold text-slate-700">
-            כניסה מהירה עם חשבון Google קיים:
-          </div>
-          <div>
-            <input
-              type="email"
-              value={demoEmail}
-              onChange={(e) => setDemoEmail(e.target.value)}
-              placeholder="user@example.com (חשבון Google שלך)"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
-            />
-          </div>
-          <div>
-            <input
-              type="text"
-              value={demoName}
-              onChange={(e) => setDemoName(e.target.value)}
-              placeholder="שם מלא (אופציונלי)"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition"
-          >
-            כניסה למערכת
-          </button>
-        </form>
-
-        {/* Fast Role Switcher Buttons */}
-        <div className="pt-3 border-t border-slate-100">
-          <div className="text-[11px] font-semibold text-slate-500 mb-2">
-            או כניסה מהירה לפי תפקיד:
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => handleQuickRoleLogin('shalomkopla@gmail.com', 'שלום קופלה (מנהל מערכת)')}
-              className="py-1.5 px-2 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-lg border border-purple-200 font-bold transition text-right"
-            >
-              👑 שלום קופלה (מנהל)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickRoleLogin('ronit.levi@company.com', 'רונית לוי')}
-              className="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg border border-blue-200 font-bold transition text-right"
-            >
-              📦 רונית לוי (רכש)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickRoleLogin('daniel.cohen@company.com', 'דניאל כהן')}
-              className="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 font-bold transition text-right"
-            >
-              💼 דניאל כהן (מכירות)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickRoleLogin('yoav.avraham@company.com', 'יואב אברהם')}
-              className="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg border border-amber-200 font-bold transition text-right"
-            >
-              🛠️ יואב אברהם (פיתוח)
-            </button>
           </div>
         </div>
       </div>

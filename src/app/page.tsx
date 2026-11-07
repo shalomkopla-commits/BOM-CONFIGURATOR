@@ -960,39 +960,12 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Collapsed Mini Summary Bar */}
-        {isHeaderCollapsed && (
-          <div className="max-w-[1640px] mx-auto px-6 py-1.5 flex items-center justify-between text-xs bg-slate-950/80 border-t border-slate-800/60">
-            <div className="flex items-center gap-3">
-              <span className="font-bold text-slate-200 text-xs flex items-center gap-1.5">
-                <span>⚙️</span> קונפיגורטור מוצר וניהול BOM
-              </span>
-              <span className="text-slate-600">•</span>
-              <span className="text-blue-400 font-semibold">
-                {activeScreen === 'list' || activeScreen === 'detail'
-                  ? '1. הזמנות ו-BOM'
-                  : activeScreen === 'new'
-                  ? '2. פתיחת הזמנה חדשה'
-                  : 'ניהול מערכת'}
-              </span>
-              <span className="text-slate-600">•</span>
-              <span className="text-slate-400 text-[11px]">
-                מחובר:{' '}
-                <strong className="text-slate-200">{currentUserLabel}</strong>
-              </span>
-            </div>
-            <div className="text-[11px] text-slate-400">
-              תריס עליון מכווץ לחסכון בשטח מסך
-            </div>
-          </div>
-        )}
-
         {/* Shutter Toggle Tab Button */}
-        <div className="flex justify-center -mb-3 relative z-10">
+        <div className="flex justify-center -mb-2.5 relative z-10">
           <button
             type="button"
             onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-0.5 rounded-b-xl border-x border-b border-slate-600 text-[11px] font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
+            className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-0.5 rounded-b-md border-x border-b border-slate-600 text-xs font-bold shadow-md transition flex items-center justify-center cursor-pointer"
             title={
               isHeaderCollapsed
                 ? 'פתח תריס סרגל עליון'
@@ -1000,11 +973,6 @@ export default function HomePage() {
             }
           >
             <span>{isHeaderCollapsed ? '▼' : '▲'}</span>
-            <span>
-              {isHeaderCollapsed
-                ? 'פתח תריס סרגל עליון'
-                : 'כווץ תריס סרגל עליון'}
-            </span>
           </button>
         </div>
       </header>
@@ -1214,10 +1182,10 @@ export default function HomePage() {
                             דרישות עיקריות (הספק / מוקד / מתח)
                           </th>
                           <th
-                            onClick={() => handleSortTable('env')}
-                            className="py-2.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors"
+                            onClick={() => handleSortTable('usage')}
+                            className="py-2.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors whitespace-nowrap"
                           >
-                            תנאי סביבה ושימוש ⇅
+                            שימוש ⇅
                           </th>
                           <th
                             onClick={() => handleSortTable('deliveryDate')}
@@ -1267,28 +1235,16 @@ export default function HomePage() {
                                 <div className="font-mono font-bold text-xs text-blue-700 group-hover:text-blue-800 leading-tight">
                                   {o.id}
                                 </div>
-                                <div className="text-[11px] text-slate-500 truncate max-w-[210px] leading-tight mt-0.5">
-                                  <span className="font-semibold text-slate-800">
-                                    {o.customer}
-                                  </span>
-                                  {o.contact && (
-                                    <span className="text-slate-400">
-                                      {' '}• {o.contact}
-                                    </span>
-                                  )}
+                                <div className="text-[10px] text-slate-500 font-medium truncate max-w-[200px] leading-tight mt-0.5">
+                                  {o.customer}
                                 </div>
                               </td>
 
                               {/* 2. סוג מערכת */}
                               <td className="py-2 px-3 whitespace-nowrap">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-bold text-slate-900">
-                                    {o.systemName}
-                                  </span>
-                                  <span className="text-[11px] text-slate-500 font-normal">
-                                    ({o.channels} ערוצים, {o.psuCount} ספקים)
-                                  </span>
-                                </div>
+                                <span className="font-bold text-slate-900">
+                                  {o.systemName}
+                                </span>
                               </td>
 
                               {/* 3. דרישות עיקריות */}
@@ -1314,19 +1270,9 @@ export default function HomePage() {
                                 </div>
                               </td>
 
-                              {/* 4. תנאי סביבה ושימוש */}
+                              {/* 4. שימוש */}
                               <td className="py-2 px-3 whitespace-nowrap">
-                                <span
-                                  className={`font-medium ${
-                                    isCustomEnv
-                                      ? 'text-orange-950 font-bold'
-                                      : 'text-slate-800'
-                                  }`}
-                                >
-                                  {o.env}
-                                </span>
-                                <span className="text-slate-300 mx-1">•</span>
-                                <span className="text-slate-500 text-[11px]">
+                                <span className="font-semibold text-slate-800">
                                   {o.usage}
                                 </span>
                               </td>
@@ -1357,8 +1303,8 @@ export default function HomePage() {
                                       ℹ️
                                     </span>
 
-                                    {/* Cloud Tooltip on hover */}
-                                    <div className="absolute z-30 bottom-full right-1/2 translate-x-1/2 mb-2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-xl shadow-2xl p-3 w-64 pointer-events-none transition-all border border-slate-700 text-right">
+                                    {/* Cloud Tooltip on hover - positioned top-full mt-2 and z-50 to avoid clipping on top rows */}
+                                    <div className="absolute z-50 top-full mt-2 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-xl shadow-2xl p-3 w-64 pointer-events-none transition-all border border-slate-700 text-right">
                                       <div className="font-bold text-amber-300 border-b border-slate-700 pb-1.5 mb-1.5 flex items-center justify-between">
                                         <span>היסטוריית הזמנה</span>
                                         <span className="font-mono text-slate-300 text-[10px]">
@@ -1389,7 +1335,8 @@ export default function HomePage() {
                                           </div>
                                         </div>
                                       </div>
-                                      <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-900" />
+                                      {/* Arrow on top pointing up to icon */}
+                                      <div className="absolute left-1/2 -translate-x-1/2 -top-1 w-0 h-0 border-x-4 border-x-transparent border-b-4 border-b-slate-900 border-t-0" />
                                     </div>
                                   </div>
                                 </div>
@@ -1900,6 +1847,35 @@ export default function HomePage() {
                         </div>
 
                         <div className="space-y-2 text-xs max-h-96 overflow-y-auto pr-1">
+                          {/* Root System in Preview */}
+                          <div className="p-2.5 rounded-lg flex justify-between items-center bg-blue-950/80 border border-blue-700">
+                            <div className="flex items-center gap-2.5">
+                              <img
+                                src={getItemImageUrl(
+                                  selectedSysObj?.id || 'SYS-STD-100',
+                                  null,
+                                  false
+                                )}
+                                alt={selectedSysObj?.name || 'מערכת'}
+                                className="w-10 h-8 object-cover rounded border border-blue-500 bg-white"
+                              />
+                              <div>
+                                <span className="font-bold text-blue-300">
+                                  🖥️ [מערכת על (Root)]
+                                </span>{' '}
+                                <span className="text-white font-semibold">
+                                  {selectedSysObj?.name || 'מערכת אופטית'}
+                                </span>
+                                <div className="text-[11px] text-blue-300/80 font-mono">
+                                  מק&quot;ט: {selectedSysObj?.id} (Rev A) | {selectedSysObj?.channels || 2} ערוצים, {selectedSysObj?.psuCount || 1} ספקים
+                                </div>
+                              </div>
+                            </div>
+                            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                              מערכת בסיס
+                            </span>
+                          </div>
+
                           {previewBom.map((b) => (
                             <div
                               key={b.id}
@@ -2311,6 +2287,69 @@ export default function HomePage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 text-xs">
+                          {/* 0. Root System Level 0 Row (חלק בלתי נפרד מה-BOM) */}
+                          <tr className="bg-blue-50/70 border-b-2 border-blue-200 hover:bg-blue-100/60 font-medium">
+                            <td className="py-2.5 px-3">
+                              <img
+                                src={getItemImageUrl(
+                                  currentOrder.systemTypeId || 'SYS-STD-100',
+                                  null,
+                                  false
+                                )}
+                                alt={currentOrder.systemName}
+                                className="w-16 h-11 object-cover rounded border border-blue-300 shadow-sm bg-white"
+                              />
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <div className="font-extrabold text-blue-900 flex items-center gap-1.5">
+                                <span>🖥️</span>
+                                <span>מערכת על (Root / Level 0)</span>
+                              </div>
+                              <span className="inline-block mt-0.5 text-[10px] bg-blue-200 text-blue-900 px-2 py-0.5 rounded font-bold">
+                                מערכת בסיס ראשית
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-mono font-bold text-blue-900">
+                              <div>{currentOrder.systemTypeId || 'SYS-STD-100'}</div>
+                              <span className="text-[10px] bg-blue-100 border border-blue-300 px-1.5 py-0.5 rounded text-blue-700">
+                                Rev A
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-bold text-slate-900">
+                              <div>{currentOrder.systemName}</div>
+                              <div className="text-[11px] text-slate-500 font-normal mt-0.5">
+                                {currentOrder.channels} ערוצים • {currentOrder.psuCount} ספקי כוח • סוג שימוש: {currentOrder.usage}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 text-center font-bold text-blue-900">
+                              1
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span className="bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md font-bold text-[11px]">
+                                מערכת שלמה
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-semibold text-slate-900">
+                              {currentOrder.systemName}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-700">
+                                🔒 קבוע
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-[11px] text-slate-600">
+                              <div className="font-semibold text-slate-800">
+                                👤 {currentOrder.createdBy}
+                              </div>
+                              <div className="text-slate-400 font-mono">
+                                🕒 {currentOrder.createdAt}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 text-center text-slate-400">
+                              -
+                            </td>
+                          </tr>
+
                           {currentOrderBom.map((b) => {
                             const isSub = b.level === 'sub-assembly';
                             const isRemoved = b.removed === true;
@@ -2490,11 +2529,6 @@ export default function HomePage() {
                                       >
                                         {b.selectedAlt}
                                       </span>
-                                      {b.rowLocked && !b.isCustom && (
-                                        <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-semibold">
-                                          🔒 נעול
-                                        </span>
-                                      )}
                                     </div>
                                   )}
                                 </td>

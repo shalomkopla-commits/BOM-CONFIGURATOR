@@ -63,6 +63,69 @@ export default function AdminDashboard({
   const [newUserEmail, setNewUserEmail] = useState<string>('');
   const [newUserRole, setNewUserRole] = useState<RoleType>('viewer');
 
+  // User Edit Modal State
+  const [editingUserIdx, setEditingUserIdx] = useState<number>(-1);
+  const [editUserName, setEditUserName] = useState<string>('');
+  const [editUserEmail, setEditUserEmail] = useState<string>('');
+  const [editUserRole, setEditUserRole] = useState<RoleType>('viewer');
+  const [editUserActive, setEditUserActive] = useState<boolean>(true);
+
+  const startEditUser = (u: AppUser, idx: number) => {
+    setEditingUserIdx(idx);
+    setEditUserName(u.fullName);
+    setEditUserEmail(u.email);
+    setEditUserRole(u.role);
+    setEditUserActive(u.active);
+  };
+
+  const handleSaveEditedUser = () => {
+    if (editingUserIdx < 0 || !users[editingUserIdx]) return;
+    const nameTrim = editUserName.trim();
+    const emailTrim = editUserEmail.trim().toLowerCase();
+    if (!nameTrim) {
+      alert('נא להזין שם מלא.');
+      return;
+    }
+    if (!emailTrim || !emailTrim.includes('@')) {
+      alert('נא להזין כתובת אימייל תקנית.');
+      return;
+    }
+    const duplicate = users.some(
+      (u, i) => i !== editingUserIdx && u.email.toLowerCase() === emailTrim
+    );
+    if (duplicate) {
+      alert('כתובת אימייל זו כבר קיימת עבור משתמש אחר במערכת.');
+      return;
+    }
+
+    const nextUsers = [...users];
+    nextUsers[editingUserIdx] = {
+      ...nextUsers[editingUserIdx],
+      fullName: nameTrim,
+      email: emailTrim,
+      role: editUserRole,
+      active: editUserActive,
+      updatedBy: `${currentUserLabel} (${getNowTimestamp()})`,
+    };
+    onUpdateState({ users: nextUsers });
+    setEditingUserIdx(-1);
+  };
+
+  const handleDeleteUser = (idx: number) => {
+    if (idx < 0 || !users[idx]) return;
+    const u = users[idx];
+    if (u.role === 'manager' && users.filter((x) => x.role === 'manager').length <= 1) {
+      alert('לא ניתן למחוק את מנהל המערכת היחיד.');
+      return;
+    }
+    if (!confirm(`האם אתה בטוח שברצונך למחוק את המשתמש ${u.fullName} (${u.email})?`)) {
+      return;
+    }
+    const nextUsers = users.filter((_, i) => i !== idx);
+    onUpdateState({ users: nextUsers });
+    setEditingUserIdx(-1);
+  };
+
   // --- Tab A: Catalog Rules State ---
   const [filterCat, setFilterCat] = useState<string>('ALL');
   const [newCatInput, setNewCatInput] = useState<string>('');
@@ -1919,6 +1982,15 @@ export default function AdminDashboard({
                           )}
                           <button
                             type="button"
+                            onClick={() => startEditUser(u, idx)}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2.5 py-1 rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-2xs"
+                            title="ערוך פרטי משתמש"
+                          >
+                            <span>✏️</span>
+                            <span>ערוך</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => {
                               const nextUsers = [...users];
                               nextUsers[idx] = {
@@ -2002,6 +2074,116 @@ export default function AdminDashboard({
               >
                 🗑️ אשר מחיקה והעבר לסל מיחזור
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUserIdx !== -1 && users[editingUserIdx] && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border-2 border-purple-400 shadow-2xl max-w-lg w-full p-6 space-y-4 text-right">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-purple-600"></span>
+                <h3 className="font-bold text-base text-slate-900">
+                  ✏️ עריכת פרטי משתמש ({users[editingUserIdx].id})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingUserIdx(-1)}
+                className="text-slate-400 hover:text-slate-700 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  שם מלא של המשתמש:
+                </label>
+                <input
+                  type="text"
+                  value={editUserName}
+                  onChange={(e) => setEditUserName(e.target.value)}
+                  placeholder="למשל: דניאל כהן"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-purple-400 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  כתובת אימייל (חשבון Google):
+                </label>
+                <input
+                  type="email"
+                  value={editUserEmail}
+                  onChange={(e) => setEditUserEmail(e.target.value)}
+                  placeholder="user@example.com"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-purple-400 outline-none font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    תפקיד במערכת:
+                  </label>
+                  <select
+                    value={editUserRole}
+                    onChange={(e) => setEditUserRole(e.target.value as RoleType)}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-purple-400 outline-none bg-white"
+                  >
+                    <option value="viewer">👁️ צופה (שירות לקוחות / ייצור)</option>
+                    <option value="sales">💼 איש מכירות</option>
+                    <option value="procurement">📦 איש רכש / תפ"י</option>
+                    <option value="dev">🔧 איש פיתוח / הנדסה</option>
+                    <option value="manager">⚙️ מנהל מערכת</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    סטטוס פעילות:
+                  </label>
+                  <select
+                    value={editUserActive ? 'active' : 'paused'}
+                    onChange={(e) => setEditUserActive(e.target.value === 'active')}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-purple-400 outline-none bg-white"
+                  >
+                    <option value="active">🟢 פעיל ומורשה גישה</option>
+                    <option value="paused">⏸️ מושהה (גישה חסומה)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => handleDeleteUser(editingUserIdx)}
+                className="px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold transition"
+              >
+                🗑️ מחק משתמש
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingUserIdx(-1)}
+                  className="px-4 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  ביטול
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEditedUser}
+                  className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow"
+                >
+                  💾 שמור שינויים
+                </button>
+              </div>
             </div>
           </div>
         </div>
