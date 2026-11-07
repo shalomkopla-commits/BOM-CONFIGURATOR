@@ -24,6 +24,7 @@ import {
   getUnlockedBomRows,
 } from '@/lib/bomEngine';
 import {
+  getAuthenticatedGoogleUser,
   isSupabaseConfigured,
   loadConfiguratorState,
   resetConfiguratorState,
@@ -196,12 +197,11 @@ export default function HomePage() {
     setGoogleModalOpen(false);
   };
 
-  // Load state on mount
+  // Load state and check Supabase Auth / pending Google login on mount
   useEffect(() => {
     let mounted = true;
-    loadConfiguratorState().then(({ state, source }) => {
+    loadConfiguratorState().then(async ({ state, source }) => {
       if (!mounted) return;
-      // Ensure every order has its BOM array populated
       const hydratedOrders = state.orders.map((o) => ({
         ...o,
         bom: ensureOrderHasBom(
@@ -211,8 +211,58 @@ export default function HomePage() {
           state.categories
         ),
       }));
-      const hydratedUsers =
-        state.users && state.users.length > 0 ? state.users : INITIAL_USERS;
+      let hydratedUsers =
+        state.users && state.users.length > 0 ? [...state.users] : [...INITIAL_USERS];
+
+      // Check real Supabase Auth Google user or pending local /login session
+      const supaUser = await getAuthenticatedGoogleUser();
+      let pendingLogin: { email: string; fullName: string } | null = supaUser;
+
+      if (!pendingLogin && typeof window !== 'undefined') {
+        const rawPending = window.localStorage.getItem('bom_pending_google_login');
+        if (rawPending) {
+          try {
+            pendingLogin = JSON.parse(rawPending);
+            window.localStorage.removeItem('bom_pending_google_login');
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      if (pendingLogin && pendingLogin.email) {
+        const emailLower = pendingLogin.email.toLowerCase();
+        const ts = getNowTimestamp();
+        const existingIdx = hydratedUsers.findIndex(
+          (u) => u.email.toLowerCase() === emailLower
+        );
+        if (existingIdx >= 0) {
+          const existing = hydratedUsers[existingIdx];
+          hydratedUsers[existingIdx] = { ...existing, lastSignInAt: ts };
+          setActiveUserEmail(existing.email);
+          setRole(existing.role);
+        } else {
+          // New Google user -> auto-assign 'viewer' (צופה)
+          const newUser: AppUser = {
+            id: `USR-${100 + hydratedUsers.length + 1}`,
+            email: emailLower,
+            fullName: pendingLogin.fullName || emailLower.split('@')[0],
+            role: 'viewer',
+            provider: 'google',
+            active: true,
+            createdAt: ts,
+            lastSignInAt: ts,
+            updatedBy: 'Google Sign-In (הוגדר אוטומטית כצופה)',
+          };
+          hydratedUsers = [newUser, ...hydratedUsers];
+          setActiveUserEmail(newUser.email);
+          setRole('viewer');
+          setAuthBannerMsg(
+            `משתמש Google חדש (${newUser.email}) התחבר למערכת והוגדר אוטומטית כ"צופה" (Viewer).`
+          );
+        }
+      }
+
       setAppState({ ...state, orders: hydratedOrders, users: hydratedUsers });
       setStorageSource(source);
       setIsLoaded(true);

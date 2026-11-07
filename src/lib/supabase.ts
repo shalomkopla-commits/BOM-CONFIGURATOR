@@ -107,7 +107,10 @@ export async function signInWithGoogleOAuth(): Promise<{ redirected: boolean; er
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+          redirectTo:
+            typeof window !== 'undefined'
+              ? `${window.location.origin}/auth/callback`
+              : undefined,
         },
       });
       if (error) return { redirected: false, error: error.message };
@@ -117,6 +120,37 @@ export async function signInWithGoogleOAuth(): Promise<{ redirected: boolean; er
     }
   }
   return { redirected: false };
+}
+
+export async function getAuthenticatedGoogleUser(): Promise<{
+  email: string;
+  fullName: string;
+  role?: string;
+} | null> {
+  if (!supabase) return null;
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || !user.email) return null;
+
+    const { data: profile } = await supabase
+      .from('app_users')
+      .select('email, full_name, role')
+      .eq('email', user.email.toLowerCase())
+      .maybeSingle();
+
+    return {
+      email: user.email.toLowerCase(),
+      fullName:
+        profile?.full_name ||
+        user.user_metadata?.full_name ||
+        user.email.split('@')[0],
+      role: profile?.role || 'viewer',
+    };
+  } catch {
+    return null;
+  }
 }
 
 
