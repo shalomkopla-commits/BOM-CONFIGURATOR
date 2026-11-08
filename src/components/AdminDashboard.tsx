@@ -873,23 +873,37 @@ export default function AdminDashboard({
       .filter((group) => group.count > 0);
   }, [catalogRules, categories, filterCat]);
 
+  const formatBadgeInfo = (item: string) => {
+    if (item === 'IP54 מעבדה/פנים') return { label: 'IP54', tip: 'IP54 – מעבדה / פנים' };
+    if (item === 'IP65 שטח ממוזג') return { label: 'IP65', tip: 'IP65 – שטח ממוזג' };
+    if (item === 'IP67 מוקשח') return { label: 'IP67', tip: 'IP67 – מוקשח' };
+    if (item === '400V 3-Phase') return { label: '400V 3P', tip: '400V 3-Phase (תלת פאזי)' };
+    if (item === '230V AC') return { label: '230V', tip: '230V AC (חד פאזי)' };
+    if (item === '28V DC') return { label: '28V DC', tip: '28V DC' };
+    return { label: item, tip: item };
+  };
+
   const renderParamBadges = (
     items: string[] | undefined,
     colorClass = 'bg-blue-50 text-blue-700 border-blue-200'
   ) => {
     if (!items || items.length === 0) {
-      return <span className="text-[10px] text-slate-400">הכל</span>;
+      return <span className="text-[10px] text-slate-400 select-none">הכל</span>;
     }
     return (
-      <div className="flex flex-wrap items-center gap-1 min-w-[140px]">
-        {items.map((item) => (
-          <span
-            key={item}
-            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap shadow-2xs ${colorClass}`}
-          >
-            {item}
-          </span>
-        ))}
+      <div className="flex flex-wrap items-center gap-1">
+        {items.map((item) => {
+          const { label, tip } = formatBadgeInfo(item);
+          return (
+            <span
+              key={item}
+              title={tip}
+              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap shadow-2xs cursor-default ${colorClass}`}
+            >
+              {label}
+            </span>
+          );
+        })}
       </div>
     );
   };
@@ -1291,21 +1305,21 @@ export default function AdminDashboard({
                     </span>
                   </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-right text-xs">
-                      <thead className="bg-slate-100 text-slate-600 text-[11px] uppercase border-b border-slate-200 select-none">
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full text-right text-xs table-auto">
+                      <thead className="bg-slate-100 text-slate-700 text-[11px] font-bold uppercase border-b border-slate-200 select-none">
                         <tr>
-                          <th className="py-2.5 px-3">תמונה</th>
-                          <th className="py-2.5 px-3">מק&quot;ט ו-Rev</th>
-                          <th className="py-2.5 px-3">תיאור פריט</th>
-                          <th className="py-2.5 px-3 text-center">סטטוס</th>
-                          <th className="py-2.5 px-3 min-w-[130px]">הספקים</th>
-                          <th className="py-2.5 px-3 min-w-[130px]">אורכי מוקד</th>
-                          <th className="py-2.5 px-3 min-w-[130px]">הזנת חשמל</th>
-                          <th className="py-2.5 px-3 min-w-[130px]">תנאי סביבה</th>
-                          <th className="py-2.5 px-3 min-w-[130px]">שימוש</th>
-                          <th className="py-2.5 px-3 font-mono">עלות</th>
-                          <th className="py-2.5 px-3 text-center">פעולות</th>
+                          <th className="py-2.5 px-2 w-12 text-center">תמונה</th>
+                          <th className="py-2.5 px-2 w-28">מק&quot;ט ו-Rev</th>
+                          <th className="py-2.5 px-2 min-w-[120px] max-w-[180px]">תיאור פריט</th>
+                          <th className="py-2.5 px-1 w-10 text-center">סטטוס</th>
+                          <th className="py-2.5 px-1.5 min-w-[80px]">הספקים</th>
+                          <th className="py-2.5 px-1.5 min-w-[75px]">אורכי מוקד</th>
+                          <th className="py-2.5 px-1.5 min-w-[75px]">הזנת חשמל</th>
+                          <th className="py-2.5 px-1.5 min-w-[75px]">תנאי סביבה</th>
+                          <th className="py-2.5 px-1.5 min-w-[65px]">שימוש</th>
+                          <th className="py-2.5 px-2 w-16 font-mono text-left">עלות</th>
+                          <th className="py-2.5 px-2 w-28 text-center">פעולות</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
@@ -1320,18 +1334,18 @@ export default function AdminDashboard({
                                   : 'hover:bg-purple-50/30'
                               } ${
                                 !isActive ? 'opacity-65 bg-slate-100/80' : ''
-                              } transition h-[48px]`}
+                              } transition`}
                             >
                               {/* 1. Image with Zoom-in on hover */}
-                              <td className="py-2 px-3 whitespace-nowrap">
+                              <td className="py-2 px-2 w-12 text-center whitespace-nowrap">
                                 <div className="relative group/img inline-block">
                                   <img
                                     src={getItemImageUrl(r.sku, r.customImg, false)}
                                     alt={r.desc}
-                                    className="w-14 h-9 object-cover rounded border border-slate-200 shadow-2xs cursor-zoom-in hover:border-purple-400 transition bg-white"
+                                    className="w-11 h-8 object-cover rounded border border-slate-200 shadow-2xs cursor-zoom-in hover:border-purple-400 transition bg-white"
                                   />
                                   {/* High-res Popover Preview */}
-                                  <div className="absolute z-50 top-1/2 -translate-y-1/2 right-16 hidden group-hover/img:flex flex-col bg-white rounded-xl shadow-2xl border-2 border-purple-300 p-2.5 pointer-events-none w-64 text-right">
+                                  <div className="absolute z-50 top-1/2 -translate-y-1/2 right-14 hidden group-hover/img:flex flex-col bg-white rounded-xl shadow-2xl border-2 border-purple-300 p-2.5 pointer-events-none w-64 text-right">
                                     <img
                                       src={getItemImageUrl(r.sku, r.customImg, false)}
                                       alt={r.desc}
@@ -1352,24 +1366,24 @@ export default function AdminDashboard({
 
                               {/* 2. SKU and Rev (Offset for sub-assembly) */}
                               <td
-                                className={`py-2 px-3 font-mono text-slate-800 whitespace-nowrap ${
-                                  isChild ? 'pr-7' : ''
+                                className={`py-2 px-2 font-mono text-slate-800 whitespace-nowrap w-28 ${
+                                  isChild ? 'pr-5' : ''
                                 }`}
                               >
                                 {isChild ? (
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-blue-500 font-bold text-sm leading-none select-none">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-blue-500 font-bold text-xs leading-none select-none">
                                       ↳
                                     </span>
-                                    <span className="font-bold">{r.sku}</span>
+                                    <span className="font-bold text-[11px]">{r.sku}</span>
                                   </div>
                                 ) : (
-                                  <div className="font-bold text-slate-900">{r.sku}</div>
+                                  <div className="font-bold text-xs text-slate-900">{r.sku}</div>
                                 )}
                                 <span
-                                  className={`text-[10px] px-1.5 py-0.2 rounded font-normal block w-fit mt-0.5 ${
+                                  className={`text-[9.5px] px-1 py-0.2 rounded font-normal block w-fit mt-0.5 ${
                                     isChild
-                                      ? 'bg-blue-50 text-blue-700 border border-blue-200 mr-4'
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-200 mr-3'
                                       : 'bg-slate-100 text-slate-600 border border-slate-200'
                                   }`}
                                 >
@@ -1378,22 +1392,24 @@ export default function AdminDashboard({
                               </td>
 
                               {/* 3. Description */}
-                              <td className="py-2 px-3 font-medium text-slate-900">
-                                {isChild ? cleanSubAssemblyDesc(r.desc) : r.desc}
+                              <td className="py-2 px-2 font-medium text-slate-900 text-xs min-w-[120px] max-w-[180px]">
+                                <div className="line-clamp-2 leading-snug" title={r.desc}>
+                                  {isChild ? cleanSubAssemblyDesc(r.desc) : r.desc}
+                                </div>
                               </td>
 
                               {/* 4. Status Indicator (Bulb with Tooltip) */}
-                              <td className="py-2 px-3 text-center whitespace-nowrap">
+                              <td className="py-2 px-1 text-center whitespace-nowrap w-10">
                                 <div className="relative group/tip inline-flex items-center justify-center">
                                   {isActive ? (
                                     <span className="cursor-help text-base select-none leading-none inline-flex items-center justify-center relative">
                                       <span>💡</span>
-                                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200 absolute -bottom-0.5 -right-0.5 animate-pulse" />
+                                      <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-200 absolute -bottom-0.5 -right-0.5 animate-pulse" />
                                     </span>
                                   ) : (
                                     <span className="cursor-help text-base select-none leading-none inline-flex items-center justify-center relative opacity-50 grayscale">
                                       <span>💡</span>
-                                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-200 absolute -bottom-0.5 -right-0.5" />
+                                      <span className="w-2 h-2 rounded-full bg-red-500 ring-2 ring-red-200 absolute -bottom-0.5 -right-0.5" />
                                     </span>
                                   )}
                                   <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-lg shadow-xl p-2 w-48 pointer-events-none border border-slate-700 text-center font-normal">
@@ -1421,31 +1437,31 @@ export default function AdminDashboard({
                               </td>
 
                               {/* 5-9. Parameters in Badges */}
-                              <td className="py-2 px-3 min-w-[130px]">
+                              <td className="py-2 px-1.5 min-w-[80px]">
                                 {renderParamBadges(
                                   r.matchPower,
                                   'bg-blue-50 text-blue-700 border-blue-200'
                                 )}
                               </td>
-                              <td className="py-2 px-3 min-w-[130px]">
+                              <td className="py-2 px-1.5 min-w-[75px]">
                                 {renderParamBadges(
                                   r.matchFocal,
                                   'bg-indigo-50 text-indigo-700 border-indigo-200'
                                 )}
                               </td>
-                              <td className="py-2 px-3 min-w-[130px]">
+                              <td className="py-2 px-1.5 min-w-[75px]">
                                 {renderParamBadges(
                                   r.matchVoltage,
                                   'bg-amber-50 text-amber-800 border-amber-200'
                                 )}
                               </td>
-                              <td className="py-2 px-3 min-w-[130px]">
+                              <td className="py-2 px-1.5 min-w-[75px]">
                                 {renderParamBadges(
                                   r.matchEnv,
                                   'bg-emerald-50 text-emerald-800 border-emerald-200'
                                 )}
                               </td>
-                              <td className="py-2 px-3 min-w-[130px]">
+                              <td className="py-2 px-1.5 min-w-[65px]">
                                 {renderParamBadges(
                                   r.matchUsage || ALL_USAGES,
                                   'bg-purple-50 text-purple-800 border-purple-200'
@@ -1453,19 +1469,19 @@ export default function AdminDashboard({
                               </td>
 
                               {/* 10. Cost */}
-                              <td className="py-2 px-3 font-mono font-bold text-slate-800 whitespace-nowrap">
+                              <td className="py-2 px-2 font-mono font-bold text-slate-800 whitespace-nowrap text-left w-16 text-xs">
                                 {r.cost}
                               </td>
 
                               {/* 11. Actions (Icons only with Tooltips) */}
-                              <td className="py-2 px-3 text-center whitespace-nowrap">
-                                <div className="flex items-center justify-center gap-1.5">
+                              <td className="py-2 px-2 text-center whitespace-nowrap w-28">
+                                <div className="flex items-center justify-center gap-1">
                                   {/* Edit Button */}
                                   <div className="relative group/tip inline-flex items-center">
                                     <button
                                       type="button"
                                       onClick={() => handleEditRule(idx)}
-                                      className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition text-sm shadow-2xs cursor-pointer"
+                                      className="p-1 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition text-xs shadow-2xs cursor-pointer"
                                     >
                                       ✏️
                                     </button>
@@ -1479,7 +1495,7 @@ export default function AdminDashboard({
                                     <button
                                       type="button"
                                       onClick={() => handleDuplicateRule(r)}
-                                      className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition text-sm shadow-2xs cursor-pointer"
+                                      className="p-1 rounded-md bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition text-xs shadow-2xs cursor-pointer"
                                     >
                                       📋
                                     </button>
@@ -1493,7 +1509,7 @@ export default function AdminDashboard({
                                     <button
                                       type="button"
                                       onClick={() => handleToggleRuleActive(idx)}
-                                      className={`p-1.5 rounded-lg border transition text-sm shadow-2xs cursor-pointer ${
+                                      className={`p-1 rounded-md border transition text-xs shadow-2xs cursor-pointer ${
                                         isActive
                                           ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
                                           : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
@@ -1513,7 +1529,7 @@ export default function AdminDashboard({
                                     <button
                                       type="button"
                                       onClick={() => openDeleteModal('assembly', idx)}
-                                      className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition text-sm shadow-2xs cursor-pointer"
+                                      className="p-1 rounded-md bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition text-xs shadow-2xs cursor-pointer"
                                     >
                                       🗑️
                                     </button>
