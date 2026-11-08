@@ -1142,8 +1142,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Shutter Toggle Tab Button + Pin Indicator + Quick Theme Switcher */}
-        <div className="flex justify-center -mb-2.5 relative z-10 items-center gap-1">
+        {/* Shutter Toggle Tab Button */}
+        <div className="flex justify-center -mb-2.5 relative z-10">
           <button
             type="button"
             onClick={() => {
@@ -1154,42 +1154,14 @@ export default function HomePage() {
                 setIsHeaderPinned(false);
               }
             }}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-0.5 rounded-b-md border-x border-b border-slate-600 text-xs font-bold shadow-md transition flex items-center justify-center gap-1 cursor-pointer"
+            className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-0.5 rounded-b-md border-x border-b border-slate-600 text-xs font-bold shadow-md transition flex items-center justify-center cursor-pointer"
             title={
               isHeaderCollapsed
                 ? 'פתח תריס סרגל עליון'
                 : 'כווץ תריס סרגל עליון'
             }
           >
-            <span>{isHeaderCollapsed ? '▼ תריס עליון' : '▲ סגור תריס'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const nextPinned = !isHeaderPinned;
-              setIsHeaderPinned(nextPinned);
-              if (nextPinned) setIsHeaderCollapsed(false);
-            }}
-            className={`px-2 py-0.5 rounded-b-md border-x border-b text-[11px] font-bold shadow-md transition flex items-center gap-1 cursor-pointer ${
-              isHeaderPinned
-                ? 'bg-amber-900/90 text-amber-200 border-amber-600/70 hover:bg-amber-800'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border-slate-600'
-            }`}
-            title={
-              isHeaderPinned
-                ? 'סרגל עליון נעוץ (קבוע). לחץ לשחרור נעיצה (סגירה אוטומטית בעזיבת עכבר)'
-                : 'נעץ סרגל עליון (קבוע)'
-            }
-          >
-            <span>{isHeaderPinned ? '📌 נעוץ' : '📍 הצמד'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => toggleThemeMode()}
-            className="bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 px-2.5 py-0.5 rounded-b-md border-x border-b border-slate-600 text-[11px] font-bold shadow-md transition flex items-center gap-1 cursor-pointer"
-            title={themeMode === 'dark' ? 'עבור למצב בהיר (Light)' : 'עבור למצב כהה (Dark)'}
-          >
-            <span>{themeMode === 'dark' ? '🌙 כהה' : '☀️ בהיר'}</span>
+            <span>{isHeaderCollapsed ? '▼' : '▲'}</span>
           </button>
         </div>
       </header>
@@ -3379,19 +3351,6 @@ export default function HomePage() {
           </div>
         )}
       </main>
-
-      {/* Floating Theme Switcher Button (Bottom Left) */}
-      <button
-        type="button"
-        onClick={() => toggleThemeMode()}
-        className="fixed bottom-5 left-5 z-50 flex items-center gap-2 px-3.5 py-2 rounded-full shadow-2xl border transition-all duration-200 cursor-pointer bg-slate-900/95 hover:bg-slate-800 text-amber-300 border-amber-500/40 hover:scale-105 backdrop-blur"
-        title={themeMode === 'dark' ? 'לחץ למעבר למצב בהיר (Light)' : 'לחץ למעבר למצב כהה (Dark)'}
-      >
-        <span className="text-base">{themeMode === 'dark' ? '☀️' : '🌙'}</span>
-        <span className="text-xs font-bold text-slate-100">
-          {themeMode === 'dark' ? 'מצב כהה (עבור לבהיר)' : 'מצב בהיר (עבור לכהה)'}
-        </span>
-      </button>
     </div>
   );
 }

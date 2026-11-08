@@ -5,3 +5,4 @@ export const toast = (options) => {
     else if (options?.title) alert(options.title);
   }
 };
+

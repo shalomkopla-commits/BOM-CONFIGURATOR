@@ -10,3 +10,4 @@ export const CommandGroup = ({ children, ...props }) => <div {...props}>{childre
 export const CommandItem = ({ children, onSelect, className = '', ...props }) => (
   <div onClick={onSelect} className={`p-2 hover:bg-slate-100 cursor-pointer text-sm ${className}`} {...props}>{children}</div>
 );
+

@@ -12,3 +12,4 @@ export const Button = React.forwardRef(({ className = '', variant = 'default', s
   );
 });
 Button.displayName = 'Button';
+
