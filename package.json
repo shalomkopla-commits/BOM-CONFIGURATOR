@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@base44/sdk": "^0.8.59",
+    "@base44/vite-plugin": "^1.0.52",
     "@supabase/ssr": "0.5.2",
     "@supabase/supabase-js": "2.48.1",
     "exceljs": "^4.4.0",
