@@ -2315,7 +2315,7 @@ export default function HomePage() {
                           <tr>
                             <th className="py-2 px-3">תמונה</th>
                             <th className="py-2 px-3">קטגוריה</th>
-                            <th className="py-2 px-3">מכלול</th>
+                            <th className="py-2 px-3 min-w-[280px]">מכלול</th>
                             <th className="py-2 px-3 text-center">כמות</th>
                             <th className="py-2 px-3">אופן בחירה</th>
                             <th className="py-2 px-3">
@@ -2351,13 +2351,13 @@ export default function HomePage() {
                                 🖥️ מערכת על (Root)
                               </div>
                             </td>
-                            <td className="py-2 px-3">
+                            <td className="py-2 px-3 min-w-[280px]">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex flex-col text-right">
                                   <span className="font-bold text-xs text-slate-900 leading-snug">
                                     {currentOrder.systemName}
                                   </span>
-                                  <span className="font-mono text-[11px] text-blue-900 font-bold leading-tight mt-0.5">
+                                  <span className="font-mono text-[11px] text-blue-900 font-bold leading-tight mt-0.5 whitespace-nowrap">
                                     {currentOrder.systemTypeId || 'SYS-STD-100'} (Rev A)
                                   </span>
                                 </div>
@@ -2494,7 +2494,7 @@ export default function HomePage() {
                                     </div>
                                   )}
                                 </td>
-                                <td className={`py-2 px-3 ${isSub ? 'pr-3' : ''}`}>
+                                <td className={`py-2 px-3 min-w-[280px] ${isSub ? 'pr-3' : ''}`}>
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="flex flex-col text-right">
                                       <span
@@ -2509,7 +2509,7 @@ export default function HomePage() {
                                         {b.desc}
                                       </span>
                                       <span
-                                        className={`font-mono text-[11px] leading-tight mt-0.5 ${
+                                        className={`font-mono text-[11px] leading-tight mt-0.5 whitespace-nowrap ${
                                           isRemoved
                                             ? 'line-through text-red-600'
                                             : b.isCustom
