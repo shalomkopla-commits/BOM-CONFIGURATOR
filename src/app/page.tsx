@@ -76,6 +76,7 @@ export default function HomePage() {
   );
   const [newCustomerName, setNewCustomerName] = useState<string>('');
   const [newCustomerContact, setNewCustomerContact] = useState<string>('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState<string>('');
   const [newCustomerEmail, setNewCustomerEmail] = useState<string>('');
   const [deliveryDate, setDeliveryDate] = useState<string>('2026-12-15');
   const [selectedSysId, setSelectedSysId] = useState<string>('SYS-PRO-200');
@@ -214,6 +215,22 @@ export default function HomePage() {
       }));
       let hydratedUsers =
         state.users && state.users.length > 0 ? [...state.users] : [...INITIAL_USERS];
+
+      // Normalize any non-sequential user IDs (e.g. Supabase Auth UUIDs) to USR-XXX
+      let maxSeq = 100;
+      hydratedUsers.forEach((u) => {
+        if (u.id && u.id.startsWith('USR-')) {
+          const num = parseInt(u.id.replace('USR-', ''), 10);
+          if (!isNaN(num) && num > maxSeq) maxSeq = num;
+        }
+      });
+      hydratedUsers = hydratedUsers.map((u) => {
+        if (!u.id || !u.id.startsWith('USR-')) {
+          maxSeq += 1;
+          return { ...u, id: `USR-${maxSeq}` };
+        }
+        return u;
+      });
 
       // Check real Supabase Auth Google user or pending local /login session
       const supaUser = await getAuthenticatedGoogleUser();
@@ -438,6 +455,9 @@ export default function HomePage() {
   const handleCreateNewOrder = () => {
     let customerName = selectedCustomer;
     let contactName = 'ישראל ישראלי';
+    let customerEmail = newCustomerEmail.trim() || undefined;
+    let customerPhone = newCustomerPhone.trim() || undefined;
+
     if (customerMode === 'new') {
       if (!newCustomerName.trim()) {
         alert('נא להזין שם לקוח חדש.');
@@ -445,6 +465,13 @@ export default function HomePage() {
       }
       customerName = newCustomerName.trim();
       contactName = newCustomerContact.trim() || 'איש קשר ראשי';
+    } else {
+      const prevOrder = appState.orders.find((o) => o.customer === selectedCustomer);
+      if (prevOrder) {
+        contactName = prevOrder.contact;
+        customerEmail = prevOrder.email;
+        customerPhone = prevOrder.phone;
+      }
     }
 
     const nowTs = getNowTimestamp();
@@ -455,7 +482,8 @@ export default function HomePage() {
       id: newId,
       customer: customerName,
       contact: contactName,
-      email: newCustomerEmail.trim() || undefined,
+      email: customerEmail,
+      phone: customerPhone,
       systemTypeId: selectedSysObj?.id || 'SYS-STD-100',
       systemName: selectedSysObj?.name || 'מערכת אופטית',
       deliveryDate: deliveryDate || '2026-12-30',
@@ -1282,16 +1310,10 @@ export default function HomePage() {
                                 {o.deliveryDate}
                               </td>
 
-                              {/* 6. עדכון - שם אחרון ותאריך מקוצר + ענן Tooltip במעבר על ה-i */}
+                              {/* 6. עדכון - תאריך מקוצר בלבד + ענן Tooltip (שם המעדכן ב-Tooltip) */}
                               <td className="py-2 px-3 whitespace-nowrap">
                                 <div className="inline-flex items-center gap-1.5 text-xs text-slate-700">
-                                  <span className="font-semibold text-slate-800">
-                                    {o.updatedBy
-                                      ? o.updatedBy.split('(')[0].trim()
-                                      : 'מערכת'}
-                                  </span>
-                                  <span className="text-slate-300">•</span>
-                                  <span className="font-mono text-slate-500 text-[11px]">
+                                  <span className="font-mono text-slate-600 text-[11px] font-medium">
                                     {o.updatedAt
                                       ? o.updatedAt.split(' ')[0]
                                       : ''}
@@ -1483,7 +1505,7 @@ export default function HomePage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-4 gap-3 pt-2 border-t border-slate-200">
+                          <div className="grid grid-cols-5 gap-3 pt-2 border-t border-slate-200">
                             <div>
                               <label className="block text-xs font-semibold text-slate-700 mb-1">
                                 שם לקוח חדש
@@ -1509,6 +1531,20 @@ export default function HomePage() {
                                   setNewCustomerContact(e.target.value)
                                 }
                                 placeholder="שם מלא"
+                                className="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                טלפון איש קשר
+                              </label>
+                              <input
+                                type="tel"
+                                value={newCustomerPhone}
+                                onChange={(e) =>
+                                  setNewCustomerPhone(e.target.value)
+                                }
+                                placeholder="050-1234567"
                                 className="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white"
                               />
                             </div>
@@ -1978,10 +2014,24 @@ export default function HomePage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          מערכת: <strong>{currentOrder.systemName}</strong> (
-                          {currentOrder.systemTypeId}) • איש קשר:{' '}
-                          {currentOrder.contact}
+                        <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
+                          <span>
+                            מערכת: <strong>{currentOrder.systemName}</strong> ({currentOrder.systemTypeId})
+                          </span>
+                          <span>•</span>
+                          <span>
+                            איש קשר: <strong>{currentOrder.contact}</strong>
+                            {currentOrder.email && (
+                              <span className="text-blue-600 font-mono text-[11px] mr-1.5">
+                                ({currentOrder.email})
+                              </span>
+                            )}
+                            {currentOrder.phone && (
+                              <span className="text-slate-600 text-[11px] mr-1.5">
+                                📞 {currentOrder.phone}
+                              </span>
+                            )}
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -2191,12 +2241,9 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Order Metadata Bar */}
+                  {/* Order Details Bar */}
                   <div className="mt-3 pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-50/80 px-3.5 py-2 rounded-lg border border-slate-200">
                     <div className="flex flex-wrap items-center gap-4">
-                      <span className="font-bold text-slate-700">
-                        📋 Metadata הזמנה:
-                      </span>
                       <span>
                         👤 נפתחה ע&quot;י:{' '}
                         <strong className="text-slate-900">
@@ -2263,33 +2310,33 @@ export default function HomePage() {
                     </div>
 
                     <div className="overflow-x-auto">
-                      <table className="w-full text-right text-sm">
-                        <thead className="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
+                      <table className="w-full text-right text-xs">
+                        <thead className="bg-slate-100 text-slate-600 text-[11px] uppercase border-b border-slate-200 select-none">
                           <tr>
-                            <th className="py-2.5 px-3">תמונה</th>
-                            <th className="py-2.5 px-3">קטגוריה / רמה</th>
-                            <th className="py-2.5 px-3">מק&quot;ט ו-Rev</th>
-                            <th className="py-2.5 px-3">תיאור מכלול / רכיב</th>
-                            <th className="py-2.5 px-3 text-center">כמות</th>
-                            <th className="py-2.5 px-3">אופן בחירה</th>
-                            <th className="py-2.5 px-3">
+                            <th className="py-2 px-3">תמונה</th>
+                            <th className="py-2 px-3">קטגוריה</th>
+                            <th className="py-2 px-3">מק&quot;ט ו-Rev</th>
+                            <th className="py-2 px-3">תיאור מכלול / רכיב</th>
+                            <th className="py-2 px-3 text-center">כמות</th>
+                            <th className="py-2 px-3">אופן בחירה</th>
+                            <th className="py-2 px-3">
                               חלופה נבחרת / הגדרת פריט
                             </th>
-                            <th className="py-2.5 px-3 text-center">
-                              סטטוס נעילה
+                            <th className="py-2 px-3 text-center">
+                              סטטוס
                             </th>
-                            <th className="py-2.5 px-3">
-                              Metadata (מי ערך ומתי)
+                            <th className="py-2 px-3">
+                              Last Update
                             </th>
-                            <th className="py-2.5 px-3 text-center">
-                              פעולות (רכש / פיתוח / מנהל)
+                            <th className="py-2 px-3 text-center">
+                              פעולות
                             </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 text-xs">
                           {/* 0. Root System Level 0 Row (חלק בלתי נפרד מה-BOM) */}
-                          <tr className="bg-blue-50/70 border-b-2 border-blue-200 hover:bg-blue-100/60 font-medium">
-                            <td className="py-2.5 px-3">
+                          <tr className="bg-blue-50/70 border-b-2 border-blue-200 hover:bg-blue-100/60 font-medium h-[46px]">
+                            <td className="py-2 px-3 whitespace-nowrap">
                               <img
                                 src={getItemImageUrl(
                                   currentOrder.systemTypeId || 'SYS-STD-100',
@@ -2297,55 +2344,79 @@ export default function HomePage() {
                                   false
                                 )}
                                 alt={currentOrder.systemName}
-                                className="w-16 h-11 object-cover rounded border border-blue-300 shadow-sm bg-white"
+                                className="w-14 h-9 object-cover rounded border border-blue-300 shadow-sm bg-white"
                               />
                             </td>
-                            <td className="py-2.5 px-3">
-                              <div className="font-extrabold text-blue-900 flex items-center gap-1.5">
-                                <span>🖥️</span>
-                                <span>מערכת על (Root / Level 0)</span>
+                            <td className="py-2 px-3 whitespace-nowrap">
+                              <div className="font-bold text-blue-900 text-xs">
+                                🖥️ מערכת על (Root)
                               </div>
-                              <span className="inline-block mt-0.5 text-[10px] bg-blue-200 text-blue-900 px-2 py-0.5 rounded font-bold">
-                                מערכת בסיס ראשית
-                              </span>
                             </td>
-                            <td className="py-2.5 px-3 font-mono font-bold text-blue-900">
+                            <td className="py-2 px-3 font-mono font-bold text-blue-900 whitespace-nowrap">
                               <div>{currentOrder.systemTypeId || 'SYS-STD-100'}</div>
                               <span className="text-[10px] bg-blue-100 border border-blue-300 px-1.5 py-0.5 rounded text-blue-700">
                                 Rev A
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 font-bold text-slate-900">
-                              <div>{currentOrder.systemName}</div>
-                              <div className="text-[11px] text-slate-500 font-normal mt-0.5">
-                                {currentOrder.channels} ערוצים • {currentOrder.psuCount} ספקי כוח • סוג שימוש: {currentOrder.usage}
+                            <td className="py-2 px-3 font-bold text-slate-900">
+                              <div className="flex items-center gap-1.5">
+                                <span>{currentOrder.systemName}</span>
+                                <div className="relative group/tip inline-flex items-center">
+                                  <span className="cursor-pointer text-slate-400 hover:text-blue-600 text-xs select-none">
+                                    ℹ️
+                                  </span>
+                                  <div className="absolute z-50 top-full mt-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-lg shadow-xl p-2.5 w-56 pointer-events-none border border-slate-700 text-right font-normal">
+                                    <div className="font-bold text-amber-300 pb-1 mb-1 border-b border-slate-700">
+                                      מפרט מערכת בסיס
+                                    </div>
+                                    <div>{currentOrder.channels} ערוצים במערכת</div>
+                                    <div>{currentOrder.psuCount} ספקי כוח</div>
+                                    <div>סוג שימוש: {currentOrder.usage}</div>
+                                  </div>
+                                </div>
                               </div>
                             </td>
-                            <td className="py-2.5 px-3 text-center font-bold text-blue-900">
+                            <td className="py-2 px-3 text-center font-bold text-blue-900">
                               1
                             </td>
-                            <td className="py-2.5 px-3">
+                            <td className="py-2 px-3 whitespace-nowrap">
                               <span className="bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md font-bold text-[11px]">
                                 מערכת שלמה
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 font-semibold text-slate-900">
+                            <td className="py-2 px-3 font-semibold text-slate-900 whitespace-nowrap">
                               {currentOrder.systemName}
                             </td>
-                            <td className="py-2.5 px-3 text-center">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-700">
-                                🔒 קבוע
+                            <td className="py-2 px-3 text-center whitespace-nowrap">
+                              <span
+                                className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-600 border border-red-300 text-xs shadow-2xs cursor-help"
+                                title="קבוע (מערכת על – אינה ניתנת לשינוי)"
+                              >
+                                🔒
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 text-[11px] text-slate-600">
-                              <div className="font-semibold text-slate-800">
-                                👤 {currentOrder.createdBy}
-                              </div>
-                              <div className="text-slate-400 font-mono">
-                                🕒 {currentOrder.createdAt}
+                            <td className="py-2 px-3 text-slate-600 whitespace-nowrap">
+                              <div className="inline-flex items-center gap-1.5">
+                                <span className="font-mono text-[11px]">
+                                  {currentOrder.createdAt.split(' ')[0]}
+                                </span>
+                                <div className="relative group/tip inline-flex items-center">
+                                  <span className="cursor-pointer text-blue-600 text-xs select-none">
+                                    ℹ️
+                                  </span>
+                                  <div className="absolute z-50 top-full mt-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-lg shadow-xl p-2.5 w-52 pointer-events-none border border-slate-700 text-right font-normal">
+                                    <div>
+                                      <span className="text-slate-400">נפתח ע&quot;י:</span>{' '}
+                                      <strong className="text-white">{currentOrder.createdBy}</strong>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                      {currentOrder.createdAt}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </td>
-                            <td className="py-2.5 px-3 text-center text-slate-400">
+                            <td className="py-2 px-3 text-center text-slate-400">
                               -
                             </td>
                           </tr>
@@ -2388,17 +2459,19 @@ export default function HomePage() {
                               ])
                             );
 
-                            const rowClass = isRemoved
-                              ? 'bg-red-50/60 opacity-75'
-                              : b.isCustom
-                              ? 'custom-orange-row'
-                              : isSub
-                              ? 'sub-assembly-row hover:bg-slate-100/80'
-                              : 'hover:bg-slate-50';
+                            const rowClass = `${
+                              isRemoved
+                                ? 'bg-red-50/60 opacity-75'
+                                : b.isCustom
+                                ? 'custom-orange-row'
+                                : isSub
+                                ? 'sub-assembly-row bg-slate-50/70 border-r-4 border-r-blue-400 hover:bg-slate-100/80'
+                                : 'hover:bg-slate-50'
+                            } h-[46px] transition`;
 
                             return (
                               <tr key={b.id} className={rowClass}>
-                                <td className="py-3 px-3">
+                                <td className="py-2 px-3 whitespace-nowrap">
                                   <img
                                     src={getItemImageUrl(
                                       b.sku,
@@ -2406,25 +2479,23 @@ export default function HomePage() {
                                       b.isCustom
                                     )}
                                     alt={b.desc}
-                                    className="w-16 h-11 object-cover rounded border border-slate-200 shadow-sm"
+                                    className="w-14 h-9 object-cover rounded border border-slate-200 shadow-2xs"
                                   />
                                 </td>
-                                <td className="py-3 px-3">
-                                  <div className="font-bold text-slate-800">
-                                    {b.category}
-                                  </div>
+                                <td className="py-2 px-3 whitespace-nowrap">
                                   {isSub ? (
-                                    <span className="inline-block mt-0.5 text-[11px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded font-medium">
-                                      ↳ תת-מכלול (בן)
-                                    </span>
+                                    <div className="text-slate-600 font-medium text-xs pr-4 flex items-center gap-1.5">
+                                      <span className="text-blue-500 font-bold text-sm leading-none">↳</span>
+                                      <span>{b.category}</span>
+                                    </div>
                                   ) : (
-                                    <span className="inline-block mt-0.5 text-[11px] bg-slate-200 text-slate-800 px-1.5 py-0.5 rounded font-bold">
-                                      מכלול ראשי (אב)
-                                    </span>
+                                    <div className="font-bold text-slate-800 text-xs">
+                                      {b.category}
+                                    </div>
                                   )}
                                 </td>
                                 <td
-                                  className={`py-3 px-3 font-mono font-bold ${
+                                  className={`py-2 px-3 font-mono font-bold whitespace-nowrap ${
                                     isRemoved
                                       ? 'line-through text-red-700'
                                       : b.isCustom
@@ -2433,13 +2504,13 @@ export default function HomePage() {
                                   }`}
                                 >
                                   <div>{b.sku}</div>
-                                  <span className="text-[10px] bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-slate-600">
+                                  <span className="text-[10px] bg-slate-100 border border-slate-200 px-1.5 py-0.2 rounded text-slate-600 font-normal">
                                     {b.rev}
                                   </span>
                                 </td>
                                 <td
-                                  className={`py-3 px-3 ${
-                                    isSub ? 'pr-6' : ''
+                                  className={`py-2 px-3 ${
+                                    isSub ? 'pr-3' : ''
                                   } ${
                                     isRemoved
                                       ? 'line-through text-red-800'
@@ -2448,24 +2519,42 @@ export default function HomePage() {
                                       : 'font-medium text-slate-900'
                                   }`}
                                 >
-                                  {isSub ? '↳ ' : ''}
-                                  {b.desc}
-                                  {isRemoved && (
-                                    <span className="mr-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-600 text-white">
-                                      🚫 הוסר
-                                    </span>
-                                  )}
-                                  {b.inactiveSource && (
-                                    <span className="mr-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
-                                      ⏸️ מכלול לא פעיל (מוצג בהזמנה קיימת)
-                                    </span>
-                                  )}
-                                  <div className="text-[11px] text-slate-500 mt-0.5">
-                                    {b.notes}
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{b.desc}</span>
+                                    {(b.notes || isRemoved || b.inactiveSource) && (
+                                      <div className="relative group/tip inline-flex items-center">
+                                        <span
+                                          className={`cursor-pointer text-xs select-none ${
+                                            isRemoved
+                                              ? 'text-red-600'
+                                              : b.inactiveSource
+                                              ? 'text-slate-500'
+                                              : 'text-blue-500'
+                                          }`}
+                                        >
+                                          {isRemoved ? '🚫' : b.inactiveSource ? '⏸️' : 'ℹ️'}
+                                        </span>
+                                        <div className="absolute z-50 top-full mt-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-lg shadow-xl p-2.5 w-60 pointer-events-none border border-slate-700 text-right font-normal">
+                                          {isRemoved && (
+                                            <div className="font-bold text-red-400 pb-0.5">
+                                              פריט סומן כהוסר ע&quot;י רכש
+                                            </div>
+                                          )}
+                                          {b.inactiveSource && (
+                                            <div className="font-bold text-amber-300 pb-0.5">
+                                              מכלול לא פעיל (הזמנה קיימת)
+                                            </div>
+                                          )}
+                                          {b.notes && (
+                                            <div className="text-slate-300">{b.notes}</div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
                                 <td
-                                  className={`py-3 px-3 text-center font-bold ${
+                                  className={`py-2 px-3 text-center font-bold ${
                                     isRemoved
                                       ? 'line-through text-red-700'
                                       : ''
@@ -2473,7 +2562,7 @@ export default function HomePage() {
                                 >
                                   {b.qty}
                                 </td>
-                                <td className="py-3 px-3">
+                                <td className="py-2 px-3 whitespace-nowrap">
                                   {isRemoved ? (
                                     <span className="bg-red-100 text-red-800 border border-red-300 px-2 py-0.5 rounded-md font-bold text-[11px]">
                                       🚫 הוסר ע&quot;י רכש
@@ -2492,7 +2581,7 @@ export default function HomePage() {
                                     </span>
                                   )}
                                 </td>
-                                <td className="py-3 px-3">
+                                <td className="py-2 px-3 whitespace-nowrap">
                                   {isRemoved ? (
                                     <span className="text-red-700 font-bold line-through">
                                       {b.selectedAlt} (הוסר)
@@ -2509,7 +2598,7 @@ export default function HomePage() {
                                             e.target.value
                                           )
                                         }
-                                        className="border-2 border-blue-500 rounded-lg px-2.5 py-1.5 bg-white text-xs font-bold text-slate-900 shadow-sm"
+                                        className="border-2 border-blue-500 rounded-lg px-2.5 py-1 bg-white text-xs font-bold text-slate-900 shadow-sm"
                                       >
                                         {optionList.map((opt) => (
                                           <option key={opt} value={opt}>
@@ -2532,35 +2621,72 @@ export default function HomePage() {
                                     </div>
                                   )}
                                 </td>
-                                <td className="py-3 px-3 text-center">
+
+                                {/* סטטוס: מנעול צהוב סגור (נעול), מנעול צהוב פתוח (פתוח לעריכה), מנעול אדום (קבוע) */}
+                                <td className="py-2 px-3 text-center whitespace-nowrap">
                                   {isRemoved ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-300">
-                                      🚫 הוסר
+                                    <span
+                                      className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-700 border border-red-300 text-xs cursor-help"
+                                      title="הוסר ע&quot;י רכש"
+                                    >
+                                      🚫
                                     </span>
                                   ) : b.rowLocked &&
                                     !b.rowEditing &&
                                     !b.isCustom ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                      🔒 נעול
+                                    <span
+                                      className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-600 border border-amber-300 text-xs shadow-2xs cursor-help"
+                                      title="נעול (אינו ניתן לשינוי ללא פתיחה)"
+                                    >
+                                      🔒
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                                      🔓 פתוח לעריכה
+                                    <span
+                                      className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-50 text-amber-500 border border-amber-300 text-xs shadow-2xs cursor-help"
+                                      title="פתוח לעריכה (ניתן לבחור חלופה)"
+                                    >
+                                      🔓
                                     </span>
                                   )}
                                 </td>
-                                <td className="py-3 px-3 text-[11px] text-slate-600">
-                                  <div className="font-semibold text-slate-800">
-                                    👤 {b.lastEditedBy}
-                                  </div>
-                                  <div className="text-slate-400 font-mono">
-                                    🕒 {b.lastEditedAt}
+
+                                {/* Last Update: תאריך מקוצר בלבד + Tooltip על המשתמש המעדכן */}
+                                <td className="py-2 px-3 text-slate-600 whitespace-nowrap">
+                                  <div className="inline-flex items-center gap-1.5">
+                                    <span className="font-mono text-[11px]">
+                                      {b.lastEditedAt
+                                        ? b.lastEditedAt.split(' ')[0]
+                                        : ''}
+                                    </span>
+                                    <div className="relative group/tip inline-flex items-center">
+                                      <span className="cursor-pointer text-blue-600 hover:text-blue-800 transition text-xs select-none">
+                                        ℹ️
+                                      </span>
+                                      <div className="absolute z-50 top-full mt-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-lg shadow-xl p-2.5 w-56 pointer-events-none border border-slate-700 text-right font-normal">
+                                        <div>
+                                          <span className="text-slate-400">
+                                            נערך ע&quot;י:
+                                          </span>{' '}
+                                          <strong className="text-white">
+                                            {b.lastEditedBy}
+                                          </strong>
+                                        </div>
+                                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                          {b.lastEditedAt}
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
                                 </td>
-                                <td className="py-3 px-3 text-center">
+
+                                {/* פעולות: לוגואים בלבד עם Tooltip */}
+                                <td className="py-2 px-3 text-center whitespace-nowrap">
                                   {isFinalApproved || currentOrder.locked ? (
-                                    <span className="text-slate-400 font-medium">
-                                      🔒 הזמנה מאושרת/נעולה
+                                    <span
+                                      className="text-slate-400 font-medium text-xs"
+                                      title="הזמנה מאושרת/נעולה"
+                                    >
+                                      🔒
                                     </span>
                                   ) : isRemoved ? (
                                     canEditRow ? (
@@ -2569,30 +2695,32 @@ export default function HomePage() {
                                         onClick={() =>
                                           handleToggleRemoveBomRow(b.id)
                                         }
-                                        className="bg-slate-700 hover:bg-slate-800 text-white px-2.5 py-1 rounded-lg font-bold text-xs shadow-sm"
+                                        title="שחזר מכלול ל-BOM"
+                                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition text-sm inline-flex items-center justify-center shadow-2xs"
                                       >
-                                        ↩️ בטל הסרה
+                                        ↩️
                                       </button>
                                     ) : (
-                                      <span className="text-red-700 font-bold">
-                                        🚫 הוסר
+                                      <span className="text-red-700 font-bold" title="הוסר">
+                                        🚫
                                       </span>
                                     )
                                   ) : b.isCustom ? (
-                                    <div className="flex items-center justify-center gap-1">
+                                    <div className="flex items-center justify-center gap-1.5">
                                       {canDev ? (
                                         <button
                                           type="button"
                                           onClick={() =>
                                             handleOpenCustomModal(b.id)
                                           }
-                                          className="bg-orange-600 hover:bg-orange-700 text-white px-2.5 py-1 rounded-lg font-bold text-xs shadow-sm"
+                                          title="הגדר מק&quot;ט פיתוח / בחר מכלול"
+                                          className="p-1.5 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-800 border border-orange-300 transition text-sm inline-flex items-center justify-center shadow-2xs"
                                         >
-                                          🔧 הגדר מק&quot;ט פיתוח / בחר מכלול
+                                          🔧
                                         </button>
                                       ) : (
-                                        <span className="text-orange-700 font-semibold">
-                                          ממתין לפיתוח
+                                        <span className="text-orange-700 text-xs" title="ממתין לפיתוח">
+                                          ⚠️
                                         </span>
                                       )}
                                       {canEditRow && (
@@ -2601,21 +2729,23 @@ export default function HomePage() {
                                           onClick={() =>
                                             handleToggleRemoveBomRow(b.id)
                                           }
-                                          className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-2 py-1 rounded-lg font-bold text-[11px]"
+                                          title="הסר מכלול מה-BOM"
+                                          className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition text-sm inline-flex items-center justify-center shadow-2xs"
                                         >
-                                          🚫 סמן כהוסר
+                                          🚫
                                         </button>
                                       )}
                                     </div>
                                   ) : canEditRow ? (
-                                    <div className="flex items-center justify-center gap-1">
+                                    <div className="flex items-center justify-center gap-1.5">
                                       {b.rowEditing ? (
                                         <button
                                           type="button"
                                           onClick={() => handleLockBomRow(b.id)}
-                                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg font-bold text-xs shadow-sm"
+                                          title="אשר בחירה ונעל שורה"
+                                          className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 transition text-sm inline-flex items-center justify-center shadow-2xs"
                                         >
-                                          🔒 אשר בחירה ונעל שורה
+                                          ✓
                                         </button>
                                       ) : (
                                         <button
@@ -2623,9 +2753,10 @@ export default function HomePage() {
                                           onClick={() =>
                                             handleOpenRowEdit(b.id)
                                           }
-                                          className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg font-bold text-xs"
+                                          title="ערוך שורה / בחר חלופה"
+                                          className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition text-sm inline-flex items-center justify-center shadow-2xs"
                                         >
-                                          ✏️ ערוך שורה
+                                          ✏️
                                         </button>
                                       )}
                                       <button
@@ -2633,14 +2764,15 @@ export default function HomePage() {
                                         onClick={() =>
                                           handleToggleRemoveBomRow(b.id)
                                         }
-                                        className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-2 py-1 rounded-lg font-bold text-[11px]"
+                                        title="הסר מכלול מה-BOM"
+                                        className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition text-sm inline-flex items-center justify-center shadow-2xs"
                                       >
-                                        🚫 סמן כהוסר
+                                        🚫
                                       </button>
                                     </div>
                                   ) : (
-                                    <span className="text-emerald-700 font-bold">
-                                      ✓ מאושר
+                                    <span className="text-emerald-700 font-bold" title="מאושר">
+                                      ✓
                                     </span>
                                   )}
                                 </td>
@@ -2659,21 +2791,10 @@ export default function HomePage() {
                     <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200">
                       <div className="flex items-center gap-2">
                         <span className="text-base">🌳</span>
-                        <div>
-                          <h3 className="font-bold text-sm text-slate-800">
-                            עץ מוצר ויזואלי עם ענפים ותמונות מכלולים מוגדלות
-                          </h3>
-                          <p className="text-xs text-slate-500">
-                            מערכת ראשית ⬅ קטגוריות ⬅ מכלולים ⬅ תתי-מכלולים (מתעדכן אוטומטית עם כל שינוי בשורת ה-BOM)
-                          </p>
-                        </div>
+                        <h3 className="font-bold text-sm text-slate-800">
+                          עץ מוצר
+                        </h3>
                       </div>
-                      <span className="text-xs text-slate-500">
-                        תמונות מתוך{' '}
-                        <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono">
-                          /public/images/assemblies/
-                        </code>
-                      </span>
                     </div>
 
                     <VisualProductTree

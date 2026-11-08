@@ -257,7 +257,21 @@ export async function loadConfiguratorState(): Promise<{
 
       // If app_users table has rows, it takes precedence!
       if (!usersResult.error && usersResult.data && usersResult.data.length > 0) {
-        baseState.users = usersResult.data.map(mapDbToUser);
+        let maxNum = 100;
+        const mappedUsers = usersResult.data.map(mapDbToUser);
+        mappedUsers.forEach((u: AppUser) => {
+          if (u.id.startsWith('USR-')) {
+            const num = parseInt(u.id.replace('USR-', ''), 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+          }
+        });
+        baseState.users = mappedUsers.map((u: AppUser) => {
+          if (!u.id || !u.id.startsWith('USR-')) {
+            maxNum += 1;
+            return { ...u, id: `USR-${maxNum}` };
+          }
+          return u;
+        });
       }
 
       // If recycle_bin table has rows, map them

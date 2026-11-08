@@ -83,6 +83,7 @@ export interface Order {
   customer: string;
   contact: string;
   email?: string;
+  phone?: string;
   systemTypeId: string;
   systemName: string;
   deliveryDate: string;

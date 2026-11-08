@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   AppUser,
   CatalogRule,
@@ -171,6 +171,15 @@ export default function AdminDashboard({
   );
   const [compatC2List, setCompatC2List] = useState<string[]>([]);
   const [compatNote, setCompatNote] = useState<string>('');
+  const [compatFilterCat, setCompatFilterCat] = useState<string>('ALL');
+
+  const filteredCompatLinks = useMemo(() => {
+    if (compatFilterCat === 'ALL') return compatLinks;
+    return compatLinks.filter((link) => {
+      const r1 = catalogRules.find((r) => r.sku === link.c1);
+      return r1 && r1.category === compatFilterCat;
+    });
+  }, [compatLinks, catalogRules, compatFilterCat]);
 
   // --- Delete Reason Modal State ---
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -693,47 +702,6 @@ export default function AdminDashboard({
       {/* TAB A: Assemblies & Selection Rules */}
       {activeTab === 'rules' && (
         <div className="space-y-5">
-          {/* Category Filter + Add Category Bar */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <label className="text-xs font-bold text-slate-700">
-                סינון מכלולים לפי קטגוריה:
-              </label>
-              <select
-                value={filterCat}
-                onChange={(e) => setFilterCat(e.target.value)}
-                className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs bg-white font-semibold"
-              >
-                <option value="ALL">כל הקטגוריות ({categories.length})</option>
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <span className="text-xs text-slate-500">
-                מציג <strong>{filteredCatalogRules.length}</strong> מכלולים
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={newCatInput}
-                onChange={(e) => setNewCatInput(e.target.value)}
-                placeholder="שם קטגוריה חדשה..."
-                className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-52 bg-white"
-              />
-              <button
-                type="button"
-                onClick={handleAddCategory}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm transition"
-              >
-                + הוסף קטגוריה חדשה
-              </button>
-            </div>
-          </div>
-
           {/* Add / Edit Assembly Form */}
           <div className="bg-white rounded-xl border-2 border-purple-200 shadow-sm p-5">
             <div className="flex items-center justify-between mb-3">
@@ -928,6 +896,47 @@ export default function AdminDashboard({
                   {editingRuleIdx >= 0 ? '💾 עדכן מכלול' : '+ הוסף מכלול'}
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Category Filter + Add Category Bar (ממוקם מתחת לאזור הוספת מכלול ומעל טבלת המכלולים) */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-bold text-slate-700">
+                סינון מכלולים לפי קטגוריה:
+              </label>
+              <select
+                value={filterCat}
+                onChange={(e) => setFilterCat(e.target.value)}
+                className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs bg-white font-semibold"
+              >
+                <option value="ALL">כל הקטגוריות ({categories.length})</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-slate-500">
+                מציג <strong>{filteredCatalogRules.length}</strong> מכלולים
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newCatInput}
+                onChange={(e) => setNewCatInput(e.target.value)}
+                placeholder="שם קטגוריה חדשה..."
+                className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-52 bg-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddCategory}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm transition"
+              >
+                + הוסף קטגוריה חדשה
+              </button>
             </div>
           </div>
 
@@ -1429,69 +1438,86 @@ export default function AdminDashboard({
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 bg-slate-50 border-b border-slate-200">
-              <h3 className="font-bold text-sm text-slate-800">
-                התאמות בין רכיבים
-              </h3>
+            <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <h3 className="font-bold text-sm text-slate-800">
+                  התאמות בין רכיבים
+                </h3>
+                <span className="text-slate-400">|</span>
+                <label className="text-xs font-bold text-slate-700">
+                  סינון לפי קטגוריה:
+                </label>
+                <select
+                  value={compatFilterCat}
+                  onChange={(e) => setCompatFilterCat(e.target.value)}
+                  className="border border-slate-300 rounded-lg px-3 py-1 text-xs bg-white font-semibold"
+                >
+                  <option value="ALL">כל הקטגוריות ({categories.length})</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <span className="text-xs text-slate-500">
+                מציג <strong>{filteredCompatLinks.length}</strong> קשרי תאימות
+              </span>
             </div>
             <table className="w-full text-right text-xs">
               <thead className="bg-slate-100 text-slate-600 border-b border-slate-200">
                 <tr>
-                  <th className="py-2.5 px-4">רכיב 1 (מק&quot;ט + שם)</th>
-                  <th className="py-2.5 px-4">רכיבים תואמים מותרים (רכיב 2)</th>
-                  <th className="py-2.5 px-4">סטטוס תאימות</th>
+                  <th className="py-2.5 px-4">רכיב (מק&quot;ט + תיאור)</th>
+                  <th className="py-2.5 px-4">רכיבים תואמים (מק&quot;ט + תיאור)</th>
                   <th className="py-2.5 px-4">הערה הנדסית</th>
-                  <th className="py-2.5 px-4 text-center">פעולות</th>
+                  <th className="py-2.5 px-4 text-center w-24">פעולות</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {compatLinks.map((link, idx) => {
+                {filteredCompatLinks.map((link: CompatLink, idx: number) => {
                   const r1 = catalogRules.find((r) => r.sku === link.c1);
                   return (
                     <tr key={link.c1 + idx} className="hover:bg-slate-50">
                       <td className="py-3 px-4 font-bold text-slate-800">
-                        <span className="font-mono bg-slate-100 px-2 py-0.5 rounded">
+                        <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-blue-800 font-bold">
                           {link.c1}
                         </span>{' '}
                         – {r1 ? r1.desc : ''}
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex flex-wrap gap-1">
-                          {link.c2List.map((sku2) => {
+                        <div className="flex flex-wrap gap-1.5">
+                          {link.c2List.map((sku2: string) => {
                             const r2 = catalogRules.find((r) => r.sku === sku2);
                             return (
                               <span
                                 key={sku2}
-                                className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded font-medium text-[11px]"
+                                className="inline-flex items-center gap-1 bg-blue-50 text-blue-900 border border-blue-200 px-2 py-0.5 rounded font-medium text-[11px]"
                               >
                                 <strong className="font-mono">{sku2}</strong>
-                                {r2 ? `(${r2.desc})` : ''}
+                                {r2 ? ` – ${r2.desc}` : ''}
                               </span>
                             );
                           })}
                         </div>
                       </td>
-                      <td className="py-3 px-4">
-                        <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
-                          ✓ תאימות מאושרת ({link.c2List.length} רכיבים)
-                        </span>
-                      </td>
                       <td className="py-3 px-4 text-slate-600">{link.note}</td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => handleEditCompat(idx)}
-                            className="text-blue-600 hover:text-blue-800 font-bold px-2 py-1 rounded bg-blue-50"
+                            title="ערוך קשר תאימות"
+                            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition text-sm shadow-2xs"
                           >
-                            ✏️ ערוך
+                            ✏️
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteCompat(idx)}
-                            className="text-red-600 hover:text-red-800 font-bold px-2 py-1 rounded bg-red-50"
+                            title="מחק קשר תאימות"
+                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition text-sm shadow-2xs"
                           >
-                            ✕ הסר
+                            🗑️
                           </button>
                         </div>
                       </td>
@@ -1867,14 +1893,13 @@ export default function AdminDashboard({
               <table className="w-full text-right text-xs">
                 <thead className="bg-slate-100 text-slate-600 border-b border-slate-200">
                   <tr>
-                    <th className="py-3 px-4">משתמש</th>
-                    <th className="py-3 px-4">חשבון Google (Email)</th>
-                    <th className="py-3 px-4">אימות</th>
-                    <th className="py-3 px-4">הגדרת תפקיד במערכת (ע&quot;י מנהל)</th>
-                    <th className="py-3 px-4">סטטוס</th>
-                    <th className="py-3 px-4">הצטרפות / התחברות אחרונה</th>
-                    <th className="py-3 px-4">עודכן ע&quot;י</th>
-                    <th className="py-3 px-4 text-center">פעולות</th>
+                    <th className="py-2.5 px-3">משתמש</th>
+                    <th className="py-2.5 px-3">חשבון Google (Email)</th>
+                    <th className="py-2.5 px-3">הגדרת תפקיד במערכת (ע&quot;י מנהל)</th>
+                    <th className="py-2.5 px-3 text-center">סטטוס</th>
+                    <th className="py-2.5 px-3">הצטרפות / התחברות אחרונה</th>
+                    <th className="py-2.5 px-3">עודכן ע&quot;י</th>
+                    <th className="py-2.5 px-3 text-center">פעולות</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -1885,7 +1910,7 @@ export default function AdminDashboard({
                         !u.active ? 'opacity-60 bg-slate-100' : ''
                       }`}
                     >
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-3">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold flex items-center justify-center text-xs shadow-sm">
                             {u.fullName.charAt(0)}
@@ -1900,16 +1925,10 @@ export default function AdminDashboard({
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-4 font-mono font-semibold text-slate-700">
+                      <td className="py-2.5 px-3 font-mono font-semibold text-slate-700">
                         {u.email}
                       </td>
-                      <td className="py-3 px-4">
-                        <span className="inline-flex items-center gap-1.5 bg-white border border-slate-300 px-2.5 py-1 rounded-full text-[11px] font-bold text-slate-700 shadow-sm">
-                          <span className="text-blue-600 font-extrabold">G</span>
-                          <span>Google Account</span>
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-3">
                         <select
                           value={u.role}
                           onChange={(e) => {
@@ -1922,7 +1941,7 @@ export default function AdminDashboard({
                             };
                             onUpdateState({ users: nextUsers });
                           }}
-                          className={`border-2 rounded-lg px-3 py-1.5 font-bold text-xs bg-white shadow-sm ${
+                          className={`border-2 rounded-lg px-2.5 py-1 font-bold text-xs bg-white shadow-sm ${
                             u.role === 'manager'
                               ? 'border-purple-400 text-purple-900'
                               : u.role === 'procurement'
@@ -1943,18 +1962,24 @@ export default function AdminDashboard({
                           <option value="manager">⚙️ מנהל מערכת</option>
                         </select>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
                         {u.active ? (
-                          <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full text-[11px] font-bold">
-                            🟢 פעיל
+                          <span
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 text-sm shadow-2xs cursor-help"
+                            title="משתמש פעיל"
+                          >
+                            💡
                           </span>
                         ) : (
-                          <span className="bg-red-100 text-red-800 border border-red-300 px-2 py-0.5 rounded-full text-[11px] font-bold">
-                            ⏸️ מושהה
+                          <span
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-600 text-sm shadow-2xs cursor-help"
+                            title="משתמש לא פעיל (מושהה)"
+                          >
+                            💡
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-[11px] text-slate-600">
+                      <td className="py-2.5 px-3 text-[11px] text-slate-600">
                         <div>
                           הצטרף: <span className="font-mono">{u.createdAt}</span>
                         </div>
@@ -1965,29 +1990,28 @@ export default function AdminDashboard({
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-[11px] text-slate-600">
+                      <td className="py-2.5 px-3 text-[11px] text-slate-600">
                         {u.updatedBy || 'Google Sign-In (אוטומטי)'}
                       </td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
                           {onSelectActiveUser && u.active && (
                             <button
                               type="button"
                               onClick={() => onSelectActiveUser(u)}
-                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg font-bold text-[11px]"
+                              className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition text-sm shadow-2xs inline-flex items-center justify-center"
                               title={`החלף חיבור פעיל אל ${u.fullName} (${ROLE_LABELS_HE[u.role]})`}
                             >
-                              🔑 התחבר כמשתמש זה
+                              🔑
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => startEditUser(u, idx)}
-                            className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2.5 py-1 rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-2xs"
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition text-sm shadow-2xs inline-flex items-center justify-center"
                             title="ערוך פרטי משתמש"
                           >
-                            <span>✏️</span>
-                            <span>ערוך</span>
+                            ✏️
                           </button>
                           <button
                             type="button"
@@ -2000,13 +2024,22 @@ export default function AdminDashboard({
                               };
                               onUpdateState({ users: nextUsers });
                             }}
-                            className={`px-2.5 py-1 rounded-lg font-bold text-[11px] ${
+                            className={`p-1.5 rounded-lg transition text-sm shadow-2xs inline-flex items-center justify-center ${
                               u.active
                                 ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
                                 : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
                             }`}
+                            title={u.active ? 'השהה משתמש' : 'הפעל משתמש'}
                           >
-                            {u.active ? '⏸️ השהה' : '▶️ הפעל'}
+                            {u.active ? '⏸️' : '▶️'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(idx)}
+                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition text-sm shadow-2xs inline-flex items-center justify-center"
+                            title="מחק משתמש מהמערכת"
+                          >
+                            🗑️
                           </button>
                         </div>
                       </td>

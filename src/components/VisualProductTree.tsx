@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { BomRow, CatalogRule, Order, SystemType } from '@/types/configurator';
 import { getItemImageUrl } from '@/data/initialData';
 
@@ -19,6 +19,11 @@ export default function VisualProductTree({
   catalogRules,
   onOpenCustomModal,
 }: VisualProductTreeProps) {
+  const [zoom, setZoom] = useState<number>(1);
+  const handleZoomIn = () => setZoom((prev) => Math.min(Number((prev + 0.15).toFixed(2)), 1.6));
+  const handleZoomOut = () => setZoom((prev) => Math.max(Number((prev - 0.15).toFixed(2)), 0.55));
+  const handleZoomReset = () => setZoom(1);
+
   const sysObj = systemTypes.find((s) => s.id === order.systemTypeId);
   const sysImageUrl = getItemImageUrl(
     order.systemTypeId,
@@ -52,8 +57,70 @@ export default function VisualProductTree({
   };
 
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 overflow-x-auto">
-      <div className="org-tree min-w-[960px]">
+    <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-col">
+      {/* Visual Tree Toolbar with Zoom In / Zoom Out Controls */}
+      <div className="px-4 py-2.5 bg-white border-b border-slate-200 flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 text-slate-700 font-semibold">
+          <span>🌳 עץ מוצר היררכי</span>
+          <span className="text-slate-400">•</span>
+          <span className="text-slate-500 font-normal">
+            {categoriesMap.size} קטגוריות • {bomRows.length} פריטים
+          </span>
+        </div>
+
+        {/* Zoom Controls */}
+        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-2xs">
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            disabled={zoom <= 0.55}
+            title="הקטן תצוגה (Zoom Out)"
+            className="p-1 px-2 rounded hover:bg-white hover:shadow-2xs text-slate-700 disabled:opacity-40 transition font-bold flex items-center gap-1 text-xs"
+          >
+            <span>🔍-</span>
+            <span>הקטן</span>
+          </button>
+
+          <span
+            onClick={handleZoomReset}
+            title="לחץ לאיפוס ל-100%"
+            className="cursor-pointer text-[11px] font-mono font-bold text-slate-600 px-2 py-0.5 rounded hover:bg-white transition"
+          >
+            {Math.round(zoom * 100)}%
+          </span>
+
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            disabled={zoom >= 1.6}
+            title="הגדל תצוגה (Zoom In)"
+            className="p-1 px-2 rounded hover:bg-white hover:shadow-2xs text-slate-700 disabled:opacity-40 transition font-bold flex items-center gap-1 text-xs"
+          >
+            <span>🔍+</span>
+            <span>הגדל</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleZoomReset}
+            title="איפוס גודל ל-100%"
+            className="p-1 px-1.5 rounded hover:bg-white hover:shadow-2xs text-slate-500 hover:text-slate-800 transition text-[11px]"
+          >
+            ↺
+          </button>
+        </div>
+      </div>
+
+      {/* Tree Viewport with LTR scroll container ensuring rightmost and leftmost branches are never cut off */}
+      <div
+        className="w-full overflow-x-auto overflow-y-auto max-h-[80vh] p-8 scroll-smooth"
+        dir="ltr"
+      >
+        <div
+          className="inline-block min-w-max px-16 py-6 transition-transform duration-200 ease-out origin-top"
+          style={{ transform: `scale(${zoom})` }}
+        >
+          <div className="org-tree">
         <ul>
           <li>
             {/* Root Node: System */}
@@ -327,6 +394,8 @@ export default function VisualProductTree({
             )}
           </li>
         </ul>
+          </div>
+        </div>
       </div>
     </div>
   );

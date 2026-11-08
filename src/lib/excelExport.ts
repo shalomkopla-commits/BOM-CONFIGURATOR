@@ -9,10 +9,11 @@ export function exportOrderBomToExcel(order: Order, bomRows: BomRow[]): void {
   const wb = XLSX.utils.book_new();
 
   // Order Summary + Metadata Rows at top of worksheet
+  const contactDetails = `${order.contact || ''}${order.email ? ` | ${order.email}` : ''}${order.phone ? ` | טל: ${order.phone}` : ''}`;
   const sheetData: (string | number)[][] = [
     ['דוח עץ מוצר וכתב כמויות (BOM) – קונפיגורטור מוצר'],
     [],
-    ['מספר הזמנה:', order.id, 'לקוח:', order.customer, 'איש קשר:', order.contact],
+    ['מספר הזמנה:', order.id, 'לקוח:', order.customer, 'איש קשר:', contactDetails],
     [
       'סוג מערכת:',
       `${order.systemName} (${order.systemTypeId})`,
@@ -126,6 +127,99 @@ export function exportOrderBomToExcel(order: Order, bomRows: BomRow[]): void {
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, `BOM_${order.id}`);
+
+  // --- Sheet 2: Visual Product Tree (מבנה עץ מוצר ויזואלי) ---
+  const treeSheetData: (string | number)[][] = [
+    [`מבנה עץ מוצר ויזואלי (Visual Product Tree) – הזמנה ${order.id}`],
+    [`לקוח: ${order.customer}`, `איש קשר: ${contactDetails}`, `תאריך הפקה: ${new Date().toLocaleDateString('he-IL')}`],
+    [],
+    [
+      'רמת עץ',
+      'סוג צומת',
+      'זיהוי / מק"ט',
+      'תיאור ישות',
+      'מהדורה',
+      'כמות',
+      'סטטוס תצורה',
+      'שיוך אב ישיר',
+      'הערות',
+    ],
+    // Level 0: Root System
+    [
+      'רמה 0 (Root)',
+      '🖥️ מערכת ראשית',
+      order.systemTypeId,
+      order.systemName,
+      'Rev A',
+      1,
+      'מערכת בסיס קבועה',
+      '-',
+      `${order.power} • ${order.focal} • ${order.voltage} • ${order.usage || 'אזרחי'}`,
+    ],
+  ];
+
+  // Group by category and build tree rows
+  const categories = Array.from(new Set(bomRows.map((b) => b.category)));
+  categories.forEach((cat) => {
+    treeSheetData.push([
+      'רמה 1',
+      '📁 קטגוריה',
+      cat,
+      `ענף קטגוריה: ${cat}`,
+      '-',
+      '-',
+      'ענף היררכי',
+      order.systemTypeId,
+      '',
+    ]);
+
+    const asms = bomRows.filter((b) => b.category === cat && b.level === 'assembly');
+    asms.forEach((asm) => {
+      const asmStatus = asm.removed ? '🚫 הוסר' : asm.isCustom ? '⚠️ דרישת פיתוח (Custom)' : 'פעיל (מאושר)';
+      treeSheetData.push([
+        '  רמה 2 (אב)',
+        '📦 מכלול ראשי',
+        asm.sku,
+        `  └── ${asm.desc}`,
+        asm.rev,
+        asm.qty,
+        asmStatus,
+        cat,
+        asm.notes || '',
+      ]);
+
+      const subs = bomRows.filter((b) => b.level === 'sub-assembly' && b.parentId === asm.id);
+      subs.forEach((sub) => {
+        const subStatus = sub.removed ? '🚫 הוסר' : sub.isCustom ? '⚠️ פיתוח Custom' : '✓ תואם מכלול';
+        treeSheetData.push([
+          '    רמה 3 (בן)',
+          '↳ תת-מכלול',
+          sub.sku,
+          `      └── ↳ ${sub.desc}`,
+          sub.rev,
+          sub.qty,
+          subStatus,
+          asm.sku,
+          sub.notes || '',
+        ]);
+      });
+    });
+  });
+
+  const wsTree = XLSX.utils.aoa_to_sheet(treeSheetData);
+  wsTree['!views'] = [{ rightToLeft: true }];
+  wsTree['!cols'] = [
+    { wch: 16 }, // רמת עץ
+    { wch: 20 }, // סוג צומת
+    { wch: 22 }, // מק"ט
+    { wch: 45 }, // תיאור
+    { wch: 10 }, // מהדורה
+    { wch: 8 },  // כמות
+    { wch: 24 }, // סטטוס
+    { wch: 20 }, // אב
+    { wch: 35 }, // הערות
+  ];
+  XLSX.utils.book_append_sheet(wb, wsTree, `עץ_מוצר_${order.id}`);
 
   const safeCustomer = order.customer.replace(/[\\/:*?"<>|]/g, '').trim();
   const fileName = `BOM_${order.id}_${safeCustomer}.xlsx`;
