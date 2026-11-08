@@ -2318,7 +2318,7 @@ export default function HomePage() {
                             <th className="py-2 px-3 min-w-[280px]">מכלול</th>
                             <th className="py-2 px-3 text-center">כמות</th>
                             <th className="py-2 px-3">אופן בחירה</th>
-                            <th className="py-2 px-3">
+                            <th className="py-2 px-3 max-w-[200px]">
                               חלופה נבחרת / הגדרת פריט
                             </th>
                             <th className="py-2 px-3 text-center">
@@ -2384,7 +2384,7 @@ export default function HomePage() {
                                 מערכת שלמה
                               </span>
                             </td>
-                            <td className="py-2 px-3 font-semibold text-slate-900 whitespace-nowrap">
+                            <td className="py-2 px-3 font-semibold text-slate-900 max-w-[200px] leading-snug">
                               {currentOrder.systemName}
                             </td>
                             <td className="py-2 px-3 text-center whitespace-nowrap">
@@ -2581,9 +2581,9 @@ export default function HomePage() {
                                     </span>
                                   )}
                                 </td>
-                                <td className="py-2 px-3 whitespace-nowrap">
+                                <td className="py-2 px-3 max-w-[200px]">
                                   {isRemoved ? (
-                                    <span className="text-red-700 font-bold line-through">
+                                    <span className="text-red-700 font-bold line-through leading-snug block">
                                       {b.selectedAlt} (הוסר)
                                     </span>
                                   ) : canEditRow &&
@@ -2598,7 +2598,7 @@ export default function HomePage() {
                                             e.target.value
                                           )
                                         }
-                                        className="border-2 border-blue-500 rounded-lg px-2.5 py-1 bg-white text-xs font-bold text-slate-900 shadow-sm"
+                                        className="border-2 border-blue-500 rounded-lg px-2 py-1 bg-white text-xs font-bold text-slate-900 shadow-sm max-w-full"
                                       >
                                         {optionList.map((opt) => (
                                           <option key={opt} value={opt}>
@@ -2610,11 +2610,11 @@ export default function HomePage() {
                                   ) : (
                                     <div className="flex items-center gap-1.5">
                                       <span
-                                        className={
+                                        className={`leading-snug ${
                                           b.isCustom
                                             ? 'text-orange-900 font-bold'
-                                            : 'text-slate-800 font-semibold'
-                                        }
+                                            : 'text-slate-800 font-medium'
+                                        }`}
                                       >
                                         {b.selectedAlt}
                                       </span>
