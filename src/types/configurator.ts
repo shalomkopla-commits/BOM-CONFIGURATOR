@@ -131,6 +131,19 @@ export interface AppUser {
   updatedBy?: string;
 }
 
+export interface Customer {
+  id: string;
+  name: string;
+  contact: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ConfiguratorState {
   categories: string[];
   systemTypes: SystemType[];
@@ -139,6 +152,7 @@ export interface ConfiguratorState {
   orders: Order[];
   recycleBin: RecycleBinItem[];
   users?: AppUser[];
+  customers?: Customer[];
 }
 
 

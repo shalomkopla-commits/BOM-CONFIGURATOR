@@ -13,6 +13,7 @@ import {
   cleanSubAssemblyDesc,
   deriveDefaultUsername,
   getItemImageUrl,
+  INITIAL_CUSTOMERS,
   INITIAL_STATE,
   INITIAL_USERS,
   ROLE_LABELS_HE,
@@ -499,6 +500,8 @@ export default function HomePage() {
     let customerEmail = newCustomerEmail.trim() || undefined;
     let customerPhone = newCustomerPhone.trim() || undefined;
 
+    let nextCustomers = appState.customers ? [...appState.customers] : [...INITIAL_CUSTOMERS];
+
     if (customerMode === 'new') {
       if (!newCustomerName.trim()) {
         alert('נא להזין שם לקוח חדש.');
@@ -506,12 +509,44 @@ export default function HomePage() {
       }
       customerName = newCustomerName.trim();
       contactName = newCustomerContact.trim() || 'איש קשר ראשי';
+
+      const exists = nextCustomers.some((c) => c.name.toLowerCase() === customerName.toLowerCase());
+      if (!exists) {
+        let maxNum = 0;
+        nextCustomers.forEach((c) => {
+          if (c.id.startsWith('CUST-')) {
+            const num = parseInt(c.id.replace('CUST-', ''), 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+          }
+        });
+        const newCustId = `CUST-${String(maxNum + 1).padStart(3, '0')}`;
+        nextCustomers = [
+          {
+            id: newCustId,
+            name: customerName,
+            contact: contactName,
+            email: customerEmail,
+            phone: customerPhone,
+            active: true,
+            createdAt: new Date().toLocaleDateString('he-IL'),
+            updatedAt: new Date().toLocaleDateString('he-IL'),
+          },
+          ...nextCustomers,
+        ];
+      }
     } else {
-      const prevOrder = appState.orders.find((o) => o.customer === selectedCustomer);
-      if (prevOrder) {
-        contactName = prevOrder.contact;
-        customerEmail = prevOrder.email;
-        customerPhone = prevOrder.phone;
+      const custObj = (appState.customers || INITIAL_CUSTOMERS).find((c) => c.name === selectedCustomer);
+      if (custObj) {
+        contactName = custObj.contact;
+        customerEmail = custObj.email;
+        customerPhone = custObj.phone;
+      } else {
+        const prevOrder = appState.orders.find((o) => o.customer === selectedCustomer);
+        if (prevOrder) {
+          contactName = prevOrder.contact;
+          customerEmail = prevOrder.email;
+          customerPhone = prevOrder.phone;
+        }
       }
     }
 
@@ -546,6 +581,7 @@ export default function HomePage() {
 
     const nextState: ConfiguratorState = {
       ...appState,
+      customers: nextCustomers,
       orders: [newOrder, ...appState.orders],
     };
     persistState(nextState);
@@ -1092,7 +1128,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Shutter Toggle Tab Button + Pin Indicator */}
+        {/* Shutter Toggle Tab Button + Pin Indicator + Quick Theme Switcher */}
         <div className="flex justify-center -mb-2.5 relative z-10 items-center gap-1">
           <button
             type="button"
@@ -1104,14 +1140,14 @@ export default function HomePage() {
                 setIsHeaderPinned(false);
               }
             }}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-0.5 rounded-b-md border-x border-b border-slate-600 text-xs font-bold shadow-md transition flex items-center justify-center cursor-pointer"
+            className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-0.5 rounded-b-md border-x border-b border-slate-600 text-xs font-bold shadow-md transition flex items-center justify-center gap-1 cursor-pointer"
             title={
               isHeaderCollapsed
                 ? 'פתח תריס סרגל עליון'
                 : 'כווץ תריס סרגל עליון'
             }
           >
-            <span>{isHeaderCollapsed ? '▼' : '▲'}</span>
+            <span>{isHeaderCollapsed ? '▼ תריס עליון' : '▲ סגור תריס'}</span>
           </button>
           <button
             type="button"
@@ -1128,10 +1164,18 @@ export default function HomePage() {
             title={
               isHeaderPinned
                 ? 'סרגל עליון נעוץ (קבוע). לחץ לשחרור נעיצה (סגירה אוטומטית בעזיבת עכבר)'
-                : 'נעץ סרגל עליון (שמור פתוח קבוע)'
+                : 'נעץ סרגל עליון (קבוע)'
             }
           >
-            <span>{isHeaderPinned ? '📌' : '📍'}</span>
+            <span>{isHeaderPinned ? '📌 נעוץ' : '📍 הצמד'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleThemeMode()}
+            className="bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 px-2.5 py-0.5 rounded-b-md border-x border-b border-slate-600 text-[11px] font-bold shadow-md transition flex items-center gap-1 cursor-pointer"
+            title={themeMode === 'dark' ? 'עבור למצב בהיר (Light)' : 'עבור למצב כהה (Dark)'}
+          >
+            <span>{themeMode === 'dark' ? '🌙 כהה' : '☀️ בהיר'}</span>
           </button>
         </div>
       </header>
@@ -1607,18 +1651,16 @@ export default function HomePage() {
                                 }
                                 className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white"
                               >
-                                <option value="לקוח א׳ – חברת אלפא טכנולוגיות">
-                                  לקוח א׳ – חברת אלפא טכנולוגיות (ישראל ישראלי)
-                                </option>
-                                <option value="לקוח ב׳ – חברת בטא תעשיות">
-                                  לקוח ב׳ – חברת בטא תעשיות (דנה לוי)
-                                </option>
-                                <option value="לקוח ג׳ – קבוצת גמא מערכות">
-                                  לקוח ג׳ – קבוצת גמא מערכות (רועי אברהם)
-                                </option>
-                                <option value="לקוח ד׳ – דלתא הנדסה בע״מ">
-                                  לקוח ד׳ – דלתא הנדסה בע&quot;מ (מיכל שפירא)
-                                </option>
+                                {(appState.customers && appState.customers.length > 0
+                                  ? appState.customers
+                                  : INITIAL_CUSTOMERS
+                                )
+                                  .filter((c) => c.active !== false)
+                                  .map((c) => (
+                                    <option key={c.id} value={c.name}>
+                                      {c.name} ({c.contact})
+                                    </option>
+                                  ))}
                               </select>
                             </div>
                             <div>
@@ -3169,6 +3211,8 @@ export default function HomePage() {
                 compatLinks={appState.compatLinks}
                 recycleBin={appState.recycleBin}
                 users={usersList}
+                customers={appState.customers || []}
+                orders={appState.orders}
                 currentUserLabel={currentUserLabel}
                 onUpdateState={(partial) => {
                   const nextState = { ...appState, ...partial };
@@ -3321,6 +3365,19 @@ export default function HomePage() {
           </div>
         )}
       </main>
+
+      {/* Floating Theme Switcher Button (Bottom Left) */}
+      <button
+        type="button"
+        onClick={() => toggleThemeMode()}
+        className="fixed bottom-5 left-5 z-50 flex items-center gap-2 px-3.5 py-2 rounded-full shadow-2xl border transition-all duration-200 cursor-pointer bg-slate-900/95 hover:bg-slate-800 text-amber-300 border-amber-500/40 hover:scale-105 backdrop-blur"
+        title={themeMode === 'dark' ? 'לחץ למעבר למצב בהיר (Light)' : 'לחץ למעבר למצב כהה (Dark)'}
+      >
+        <span className="text-base">{themeMode === 'dark' ? '☀️' : '🌙'}</span>
+        <span className="text-xs font-bold text-slate-100">
+          {themeMode === 'dark' ? 'מצב כהה (עבור לבהיר)' : 'מצב בהיר (עבור לכהה)'}
+        </span>
+      </button>
     </div>
   );
 }

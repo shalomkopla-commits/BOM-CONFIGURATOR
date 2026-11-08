@@ -5,7 +5,9 @@ import {
   AppUser,
   CatalogRule,
   CompatLink,
+  Customer,
   ImgType,
+  Order,
   RecycleBinItem,
   RoleType,
   SystemType,
@@ -31,6 +33,8 @@ interface AdminDashboardProps {
   compatLinks: CompatLink[];
   recycleBin: RecycleBinItem[];
   users: AppUser[];
+  customers?: Customer[];
+  orders?: Order[];
   currentUserLabel: string;
   onUpdateState: (updater: {
     categories?: string[];
@@ -39,6 +43,8 @@ interface AdminDashboardProps {
     compatLinks?: CompatLink[];
     recycleBin?: RecycleBinItem[];
     users?: AppUser[];
+    customers?: Customer[];
+    orders?: Order[];
   }) => void;
   onGoToNewOrder: () => void;
   onSelectActiveUser?: (user: AppUser) => void;
@@ -51,13 +57,15 @@ export default function AdminDashboard({
   compatLinks,
   recycleBin,
   users,
+  customers = [],
+  orders = [],
   currentUserLabel,
   onUpdateState,
   onGoToNewOrder,
   onSelectActiveUser,
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<
-    'rules' | 'systems' | 'compat' | 'workflow' | 'recycle' | 'users'
+    'rules' | 'systems' | 'compat' | 'workflow' | 'recycle' | 'users' | 'customers'
   >('rules');
 
   // --- Tab F: User Management State ---
@@ -141,6 +149,172 @@ export default function AdminDashboard({
     onUpdateState({ users: nextUsers });
     setEditingUserIdx(-1);
   };
+
+  // --- Tab G: Customer Management State ---
+  const [customerSearch, setCustomerSearch] = useState<string>('');
+  const [isCustomerFormOpen, setIsCustomerFormOpen] = useState<boolean>(false);
+  const [editingCustId, setEditingCustId] = useState<string | null>(null);
+  const [custName, setCustName] = useState<string>('');
+  const [custContact, setCustContact] = useState<string>('');
+  const [custPhone, setCustPhone] = useState<string>('');
+  const [custEmail, setCustEmail] = useState<string>('');
+  const [custAddress, setCustAddress] = useState<string>('');
+  const [custNotes, setCustNotes] = useState<string>('');
+  const [custActive, setCustActive] = useState<boolean>(true);
+  const [updateLinkedOrders, setUpdateLinkedOrders] = useState<boolean>(true);
+
+  const resetCustomerForm = () => {
+    setEditingCustId(null);
+    setCustName('');
+    setCustContact('');
+    setCustPhone('');
+    setCustEmail('');
+    setCustAddress('');
+    setCustNotes('');
+    setCustActive(true);
+    setUpdateLinkedOrders(true);
+  };
+
+  const handleEditCustomer = (c: Customer) => {
+    setEditingCustId(c.id);
+    setCustName(c.name);
+    setCustContact(c.contact);
+    setCustPhone(c.phone || '');
+    setCustEmail(c.email || '');
+    setCustAddress(c.address || '');
+    setCustNotes(c.notes || '');
+    setCustActive(c.active !== false);
+    setUpdateLinkedOrders(true);
+    setIsCustomerFormOpen(true);
+  };
+
+  const handleSaveCustomer = () => {
+    const nameTrim = custName.trim();
+    const contactTrim = custContact.trim();
+    if (!nameTrim || !contactTrim) {
+      alert('נא להזין שם לקוח / חברה ואיש קשר.');
+      return;
+    }
+
+    const nowStr = new Date().toLocaleDateString('he-IL');
+    let nextCustomers = [...customers];
+    let nextOrders = [...orders];
+
+    if (editingCustId) {
+      const oldCust = customers.find((c) => c.id === editingCustId);
+      const oldName = oldCust?.name;
+
+      nextCustomers = nextCustomers.map((c) =>
+        c.id === editingCustId
+          ? {
+              ...c,
+              name: nameTrim,
+              contact: contactTrim,
+              phone: custPhone.trim() || undefined,
+              email: custEmail.trim().toLowerCase() || undefined,
+              address: custAddress.trim() || undefined,
+              notes: custNotes.trim() || undefined,
+              active: custActive,
+              updatedAt: nowStr,
+            }
+          : c
+      );
+
+      // If user chose to update linked orders
+      if (updateLinkedOrders && oldName && oldName !== nameTrim) {
+        nextOrders = nextOrders.map((o) =>
+          o.customer === oldName
+            ? {
+                ...o,
+                customer: nameTrim,
+                contact: contactTrim,
+                email: custEmail.trim() || o.email,
+                phone: custPhone.trim() || o.phone,
+                updatedAt: getNowTimestamp(),
+                updatedBy: currentUserLabel,
+              }
+            : o
+        );
+      }
+    } else {
+      let maxNum = 0;
+      customers.forEach((c) => {
+        if (c.id.startsWith('CUST-')) {
+          const num = parseInt(c.id.replace('CUST-', ''), 10);
+          if (!isNaN(num) && num > maxNum) maxNum = num;
+        }
+      });
+      const newId = `CUST-${String(maxNum + 1).padStart(3, '0')}`;
+
+      const newCust: Customer = {
+        id: newId,
+        name: nameTrim,
+        contact: contactTrim,
+        phone: custPhone.trim() || undefined,
+        email: custEmail.trim().toLowerCase() || undefined,
+        address: custAddress.trim() || undefined,
+        notes: custNotes.trim() || undefined,
+        active: custActive,
+        createdAt: nowStr,
+        updatedAt: nowStr,
+      };
+
+      nextCustomers = [newCust, ...nextCustomers];
+    }
+
+    onUpdateState({ customers: nextCustomers, orders: nextOrders });
+    resetCustomerForm();
+    setIsCustomerFormOpen(false);
+  };
+
+  const handleToggleCustomerActive = (id: string) => {
+    const nextCustomers = customers.map((c) =>
+      c.id === id
+        ? {
+            ...c,
+            active: c.active === false ? true : false,
+            updatedAt: new Date().toLocaleDateString('he-IL'),
+          }
+        : c
+    );
+    onUpdateState({ customers: nextCustomers });
+  };
+
+  const handleDeleteCustomer = (id: string) => {
+    const cust = customers.find((c) => c.id === id);
+    if (!cust) return;
+
+    const linkedOrdersCount = orders.filter((o) => o.customer === cust.name).length;
+    if (linkedOrdersCount > 0) {
+      if (
+        !confirm(
+          `ללקוח זה קיימות ${linkedOrdersCount} הזמנות מקושרות במערכת. מומלץ להשבית את הלקוח במקום למחוק אותו כדי לא לפגוע ברציפות הנתונים.\n\nהאם להשבית את הלקוח כעת?`
+        )
+      ) {
+        return;
+      }
+      handleToggleCustomerActive(id);
+      return;
+    }
+
+    if (confirm(`האם אתה בטוח שברצונך למחוק את הלקוח "${cust.name}" לצמיתות?`)) {
+      const nextCustomers = customers.filter((c) => c.id !== id);
+      onUpdateState({ customers: nextCustomers });
+    }
+  };
+
+  const filteredCustomers = useMemo(() => {
+    const q = customerSearch.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.contact.toLowerCase().includes(q) ||
+        (c.email && c.email.toLowerCase().includes(q)) ||
+        (c.phone && c.phone.includes(q)) ||
+        c.id.toLowerCase().includes(q)
+    );
+  }, [customers, customerSearch]);
 
   // --- Tab A: Catalog Rules State ---
   const [isRuleFormOpen, setIsRuleFormOpen] = useState<boolean>(false);
@@ -810,9 +984,23 @@ export default function AdminDashboard({
                 : 'text-slate-300 hover:text-white'
             }`}
           >
-            <span>ו. 👥 ניהול משתמשים (Google)</span>
+            <span>ו. 👥 ניהול משתמשים</span>
             <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.2 rounded-full">
               {users.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('customers')}
+            className={`px-3.5 py-2 rounded-lg font-bold transition flex items-center gap-1.5 ${
+              activeTab === 'customers'
+                ? 'bg-purple-600 text-white'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <span>ז. 🏢 ניהול לקוחות</span>
+            <span className="bg-emerald-600 text-white text-[10px] px-1.5 py-0.2 rounded-full">
+              {customers.length}
             </span>
           </button>
         </div>
@@ -2648,6 +2836,365 @@ export default function AdminDashboard({
                   💾 שמור שינויים
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB G: Customer Management (ניהול לקוחות ועריכת פרטי לקוח) */}
+      {activeTab === 'customers' && (
+        <div className="space-y-5">
+          {/* Collapsible Add/Edit Customer Box */}
+          <div className="bg-white rounded-xl border-2 border-purple-200 shadow-sm overflow-hidden">
+            <div
+              onClick={() => {
+                if (isCustomerFormOpen && editingCustId) {
+                  resetCustomerForm();
+                }
+                setIsCustomerFormOpen((prev) => !prev);
+              }}
+              className="px-5 py-3.5 bg-gradient-to-l from-purple-50/70 to-white flex items-center justify-between cursor-pointer hover:bg-purple-50/90 transition select-none"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="w-6 h-6 rounded-lg bg-purple-600 text-white font-bold flex items-center justify-center text-sm shadow-2xs">
+                  {isCustomerFormOpen ? '−' : '+'}
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-purple-900">
+                    {editingCustId ? `עריכת לקוח: ${custName}` : 'הוספת לקוח חדש'}
+                  </h3>
+                  <span className="text-[11px] text-slate-500">
+                    הגדר לקוחות שיופיעו לבחירה בטופס פתיחת הזמנה חדשה
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-purple-700 font-semibold">
+                  {isCustomerFormOpen ? 'לחץ לסגירת הטופס ▲' : 'לחץ לפתיחת טופס הוספה ▼'}
+                </span>
+                {editingCustId && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      resetCustomerForm();
+                      setIsCustomerFormOpen(false);
+                    }}
+                    className="text-xs text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-lg font-semibold"
+                  >
+                    ביטול עריכה
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {isCustomerFormOpen && (
+              <div className="p-5 border-t border-purple-100 bg-slate-50/50">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs mb-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      שם לקוח / חברה *
+                    </label>
+                    <input
+                      type="text"
+                      value={custName}
+                      onChange={(e) => setCustName(e.target.value)}
+                      placeholder="למשל: לקוח ו׳ – חברת אומגה מערכות"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      שם איש קשר *
+                    </label>
+                    <input
+                      type="text"
+                      value={custContact}
+                      onChange={(e) => setCustContact(e.target.value)}
+                      placeholder="למשל: ירון כהן"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      מספר טלפון
+                    </label>
+                    <input
+                      type="text"
+                      value={custPhone}
+                      onChange={(e) => setCustPhone(e.target.value)}
+                      placeholder="050-1234567"
+                      dir="ltr"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-right font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs mb-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      כתובת אימייל
+                    </label>
+                    <input
+                      type="email"
+                      value={custEmail}
+                      onChange={(e) => setCustEmail(e.target.value)}
+                      placeholder="contact@company.com"
+                      dir="ltr"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-right font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      כתובת פיזית / אתר
+                    </label>
+                    <input
+                      type="text"
+                      value={custAddress}
+                      onChange={(e) => setCustAddress(e.target.value)}
+                      placeholder="פארק תעשייה, עיר"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      סטטוס פעילות
+                    </label>
+                    <select
+                      value={custActive ? 'active' : 'inactive'}
+                      onChange={(e) => setCustActive(e.target.value === 'active')}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                    >
+                      <option value="active">🟢 פעיל (מופיע בפתיחת הזמנה)</option>
+                      <option value="inactive">🔴 מושבת (מוסתר מהזמנות חדשות)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="text-xs mb-4">
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    הערות הנדסיות / מסחריות על הלקוח
+                  </label>
+                  <input
+                    type="text"
+                    value={custNotes}
+                    onChange={(e) => setCustNotes(e.target.value)}
+                    placeholder="למשל: דרישות איכות מיוחדות, שעות קבלת סחורה..."
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                  />
+                </div>
+
+                {editingCustId && (
+                  <div className="mb-4 bg-purple-50 p-2.5 rounded-lg border border-purple-200 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="updateLinkedOrders"
+                      checked={updateLinkedOrders}
+                      onChange={(e) => setUpdateLinkedOrders(e.target.checked)}
+                      className="rounded text-purple-600 focus:ring-purple-400 w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor="updateLinkedOrders" className="text-xs font-semibold text-purple-900 cursor-pointer">
+                      סנכרן ועדכן את פרטי הלקוח (שם, איש קשר, טלפון, אימייל) בכל ההזמנות הקיימות של לקוח זה
+                    </label>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetCustomerForm();
+                      setIsCustomerFormOpen(false);
+                    }}
+                    className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-100 text-xs font-semibold"
+                  >
+                    ביטול
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveCustomer}
+                    className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow transition cursor-pointer"
+                  >
+                    {editingCustId ? '💾 שמור עדכון לקוח' : '➕ הוסף לקוח למערכת'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Customers Table View with Search */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">
+                  🏢 רשימת לקוחות וארגונים ({filteredCustomers.length})
+                </h3>
+                <span className="text-xs text-slate-500">
+                  ניהול פרטי קשר, אנשי קשר, כתובות וסטטוס פעילות
+                </span>
+              </div>
+              <div className="w-72">
+                <input
+                  type="text"
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  placeholder="חפש לפי שם לקוח, איש קשר או אימייל..."
+                  className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-xs bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-slate-100 text-slate-600 text-[11px] uppercase border-b border-slate-200 select-none">
+                  <tr>
+                    <th className="py-2.5 px-3">מזהה</th>
+                    <th className="py-2.5 px-3">שם לקוח / חברה</th>
+                    <th className="py-2.5 px-3">איש קשר</th>
+                    <th className="py-2.5 px-3">טלפון</th>
+                    <th className="py-2.5 px-3">אימייל</th>
+                    <th className="py-2.5 px-3">כתובת</th>
+                    <th className="py-2.5 px-3 text-center">הזמנות מקושרות</th>
+                    <th className="py-2.5 px-3 text-center">סטטוס</th>
+                    <th className="py-2.5 px-3 text-center">פעולות</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {filteredCustomers.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-slate-400">
+                        לא נמצאו לקוחות התואמים את החיפוש.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredCustomers.map((c) => {
+                      const linkedOrdersCount = orders.filter((o) => o.customer === c.name).length;
+                      const isActive = c.active !== false;
+
+                      return (
+                        <tr
+                          key={c.id}
+                          className={`hover:bg-slate-50 transition ${
+                            !isActive ? 'bg-red-50/40 opacity-70' : ''
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-mono font-bold text-purple-700">
+                            {c.id}
+                          </td>
+                          <td className="py-2.5 px-3 font-bold text-slate-900">
+                            {c.name}
+                            {c.notes && (
+                              <div className="text-[10px] text-slate-500 font-normal mt-0.5">
+                                {c.notes}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-semibold text-slate-700">
+                            {c.contact}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-slate-600" dir="ltr">
+                            {c.phone || '-'}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-blue-700" dir="ltr">
+                            {c.email || '-'}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600">
+                            {c.address || '-'}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span
+                              className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
+                                linkedOrdersCount > 0
+                                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                  : 'bg-slate-100 text-slate-500'
+                              }`}
+                            >
+                              {linkedOrdersCount} הזמנות
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <div className="relative group/tip inline-flex items-center justify-center">
+                              {isActive ? (
+                                <span className="cursor-help text-base select-none leading-none inline-flex items-center justify-center relative">
+                                  <span>💡</span>
+                                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200 absolute -bottom-0.5 -right-0.5 animate-pulse" />
+                                </span>
+                              ) : (
+                                <span className="cursor-help text-base select-none leading-none inline-flex items-center justify-center relative opacity-50 grayscale">
+                                  <span>💡</span>
+                                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-200 absolute -bottom-0.5 -right-0.5" />
+                                </span>
+                              )}
+                              <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-lg shadow-xl p-2 w-44 pointer-events-none border border-slate-700 text-center font-normal">
+                                {isActive ? (
+                                  <>
+                                    <span className="font-bold text-emerald-400">🟢 לקוח פעיל</span>
+                                    <span className="text-[10px] text-slate-300">זמין לבחירה בהזמנות חדשות</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="font-bold text-red-400">🔴 לקוח מושבת</span>
+                                    <span className="text-[10px] text-slate-300">מוסתר בפתיחת הזמנות חדשות</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              {/* Edit Customer */}
+                              <div className="relative group/tip inline-flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditCustomer(c)}
+                                  className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition text-sm shadow-2xs cursor-pointer"
+                                >
+                                  ✏️
+                                </button>
+                                <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-md shadow-xl py-1 px-2 pointer-events-none whitespace-nowrap border border-slate-700">
+                                  ערוך פרטי לקוח
+                                </div>
+                              </div>
+
+                              {/* Toggle Active */}
+                              <div className="relative group/tip inline-flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleCustomerActive(c.id)}
+                                  className={`p-1.5 rounded-lg border transition text-sm shadow-2xs cursor-pointer ${
+                                    isActive
+                                      ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
+                                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                                  }`}
+                                >
+                                  {isActive ? '⏸️' : '▶️'}
+                                </button>
+                                <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-md shadow-xl py-1 px-2 pointer-events-none whitespace-nowrap border border-slate-700">
+                                  {isActive ? 'השבת לקוח' : 'הפעל לקוח'}
+                                </div>
+                              </div>
+
+                              {/* Delete Customer */}
+                              <div className="relative group/tip inline-flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteCustomer(c.id)}
+                                  className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition text-sm shadow-2xs cursor-pointer"
+                                >
+                                  🗑️
+                                </button>
+                                <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-md shadow-xl py-1 px-2 pointer-events-none whitespace-nowrap border border-slate-700">
+                                  מחק לקוח
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

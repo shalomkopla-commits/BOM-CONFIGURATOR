@@ -3,11 +3,13 @@ import {
   AppUser,
   CatalogRule,
   ConfiguratorState,
+  Customer,
   Order,
   RecycleBinItem,
   SystemType,
 } from '@/types/configurator';
 import {
+  INITIAL_CUSTOMERS,
   INITIAL_STATE,
   INITIAL_USERS,
   cleanSubAssemblyDesc,
@@ -250,6 +252,10 @@ export async function loadConfiguratorState(): Promise<{
         baseState = structuredClone(INITIAL_STATE);
       }
 
+      if (!baseState.customers || !Array.isArray(baseState.customers) || baseState.customers.length === 0) {
+        baseState.customers = structuredClone(INITIAL_CUSTOMERS);
+      }
+
       // Bi-directional live table overrides:
       // If catalog_rules table has rows, it takes precedence!
       if (!rulesResult.error && rulesResult.data && rulesResult.data.length > 0) {
@@ -327,6 +333,9 @@ export async function loadConfiguratorState(): Promise<{
       if (raw) {
         const parsed = JSON.parse(raw) as ConfiguratorState;
         if (parsed && Array.isArray(parsed.orders) && parsed.orders.length > 0) {
+          if (!parsed.customers || !Array.isArray(parsed.customers) || parsed.customers.length === 0) {
+            parsed.customers = structuredClone(INITIAL_CUSTOMERS);
+          }
           return { state: parsed, source: 'localStorage' };
         }
       }
