@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AppUser,
   BomRow,
@@ -57,6 +57,27 @@ export default function HomePage() {
   const [selectedOrderId, setSelectedOrderId] =
     useState<string>('ORD-2026-102');
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState<boolean>(false);
+  const [isHeaderPinned, setIsHeaderPinned] = useState<boolean>(true);
+  const headerLeaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleHeaderMouseEnter = () => {
+    if (headerLeaveTimerRef.current) {
+      clearTimeout(headerLeaveTimerRef.current);
+      headerLeaveTimerRef.current = null;
+    }
+    if (!isHeaderPinned) {
+      setIsHeaderCollapsed(false);
+    }
+  };
+
+  const handleHeaderMouseLeave = () => {
+    if (!isHeaderPinned) {
+      if (headerLeaveTimerRef.current) clearTimeout(headerLeaveTimerRef.current);
+      headerLeaveTimerRef.current = setTimeout(() => {
+        setIsHeaderCollapsed(true);
+      }, 400);
+    }
+  };
 
   // --- Screen 1: Orders List Filters & Sort ---
   const [kpiFilter, setKpiFilter] = useState<'all' | 'open' | 'dev' | 'closed'>(
@@ -881,7 +902,11 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900">
       {/* TOP BAR WITH SHUTTER ACCORDION */}
-      <header className="bg-slate-900 text-white border-b border-slate-700 sticky top-0 z-50 shadow-md">
+      <header
+        onMouseEnter={handleHeaderMouseEnter}
+        onMouseLeave={handleHeaderMouseLeave}
+        className="bg-slate-900 text-white border-b border-slate-700 sticky top-0 z-50 shadow-md transition-all group/header"
+      >
         {/* Shutter Content (Collapsible) */}
         <div
           className={`overflow-hidden transition-all duration-300 ease-in-out ${
@@ -960,8 +985,31 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Connected User Profile Display & Sign Out */}
+            {/* Connected User Profile Display, Pin Toggle & Sign Out */}
             <div className="flex flex-wrap items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700">
+              {/* Pin Header Toggle Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const nextPinned = !isHeaderPinned;
+                  setIsHeaderPinned(nextPinned);
+                  if (nextPinned) setIsHeaderCollapsed(false);
+                }}
+                className={`text-xs px-2.5 py-1.5 rounded-lg font-bold border transition flex items-center gap-1.5 cursor-pointer ${
+                  isHeaderPinned
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-400/50 hover:bg-amber-500/30'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border-slate-700 hover:bg-slate-700'
+                }`}
+                title={
+                  isHeaderPinned
+                    ? 'סרגל עליון נעוץ (קבוע). לחץ כדי לבטל נעיצה (ייסגר אוטומטית בעזיבת עכבר)'
+                    : 'נעץ סרגל עליון (השאר פתוח קבוע)'
+                }
+              >
+                <span>{isHeaderPinned ? '📌' : '📍'}</span>
+                <span>{isHeaderPinned ? 'נעוץ' : 'הצמד'}</span>
+              </button>
+
               <div className="bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 shadow-inner">
                 <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-extrabold text-[11px] flex items-center justify-center">
                   G
@@ -988,11 +1036,18 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Shutter Toggle Tab Button */}
-        <div className="flex justify-center -mb-2.5 relative z-10">
+        {/* Shutter Toggle Tab Button + Pin Indicator */}
+        <div className="flex justify-center -mb-2.5 relative z-10 items-center gap-1">
           <button
             type="button"
-            onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
+            onClick={() => {
+              if (isHeaderCollapsed) {
+                setIsHeaderCollapsed(false);
+              } else {
+                setIsHeaderCollapsed(true);
+                setIsHeaderPinned(false);
+              }
+            }}
             className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-0.5 rounded-b-md border-x border-b border-slate-600 text-xs font-bold shadow-md transition flex items-center justify-center cursor-pointer"
             title={
               isHeaderCollapsed
@@ -1001,6 +1056,26 @@ export default function HomePage() {
             }
           >
             <span>{isHeaderCollapsed ? '▼' : '▲'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const nextPinned = !isHeaderPinned;
+              setIsHeaderPinned(nextPinned);
+              if (nextPinned) setIsHeaderCollapsed(false);
+            }}
+            className={`px-2 py-0.5 rounded-b-md border-x border-b text-[11px] font-bold shadow-md transition flex items-center gap-1 cursor-pointer ${
+              isHeaderPinned
+                ? 'bg-amber-900/90 text-amber-200 border-amber-600/70 hover:bg-amber-800'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border-slate-600'
+            }`}
+            title={
+              isHeaderPinned
+                ? 'סרגל עליון נעוץ (קבוע). לחץ לשחרור נעיצה (סגירה אוטומטית בעזיבת עכבר)'
+                : 'נעץ סרגל עליון (שמור פתוח קבוע)'
+            }
+          >
+            <span>{isHeaderPinned ? '📌' : '📍'}</span>
           </button>
         </div>
       </header>

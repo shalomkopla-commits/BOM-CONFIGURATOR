@@ -226,6 +226,24 @@ export default function AdminDashboard({
     setRuleUsages([...(r.matchUsage || ALL_USAGES)]);
   };
 
+  const handleDuplicateRule = (r: CatalogRule) => {
+    setEditingRuleIdx(-1);
+    setRuleSku(`${r.sku}-COPY`);
+    setRuleRev(r.rev || 'Rev A');
+    setRuleDesc(`העתק של ${r.desc}`);
+    setRuleCategory(r.category);
+    setRuleParent(r.parentSku);
+    setRuleCost(r.cost);
+    setRuleActive(true);
+    setRuleCustomImg(r.customImg);
+    setRulePowers([...r.matchPower]);
+    setRuleFocals([...r.matchFocal]);
+    setRuleVoltages([...r.matchVoltage]);
+    setRuleEnvs([...r.matchEnv]);
+    setRuleUsages([...(r.matchUsage || ALL_USAGES)]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSaveRule = () => {
     const skuTrim = ruleSku.trim();
     const revTrim = ruleRev.trim() || 'Rev A';
@@ -351,6 +369,22 @@ export default function AdminDashboard({
     setSysPsuCount(s.psuCount);
     setSysCustomImg(s.customImg);
     setSysCatQty({ ...s.catQty });
+  };
+
+  const handleDuplicateSystem = (s: SystemType) => {
+    setEditingSysIdx(-1);
+    setSysId(`${s.id}-COPY`);
+    setSysName(`העתק של ${s.name}`);
+    setSysPowers([...(s.allowedPowers || [s.power])]);
+    setSysFocals([...(s.allowedFocals || [s.focal])]);
+    setSysVoltages([...(s.allowedVoltages || [s.voltage])]);
+    setSysEnvs([...(s.allowedEnvs || [s.env])]);
+    setSysUsages([...(s.allowedUsages || [s.usage || 'אזרחי'])]);
+    setSysChannels(s.channels);
+    setSysPsuCount(s.psuCount);
+    setSysCustomImg(s.customImg);
+    setSysCatQty({ ...s.catQty });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSaveSystem = () => {
@@ -600,6 +634,67 @@ export default function AdminDashboard({
   const filteredCatalogRules = catalogRules
     .map((rule, idx) => ({ rule, idx }))
     .filter(({ rule }) => filterCat === 'ALL' || rule.category === filterCat);
+
+  const groupedRulesByCategory = useMemo(() => {
+    const catsToShow =
+      filterCat === 'ALL'
+        ? Array.from(new Set([...categories, ...catalogRules.map((r) => r.category)]))
+        : [filterCat];
+
+    return catsToShow
+      .map((cat) => {
+        const catRules = catalogRules
+          .map((rule, idx) => ({ rule, idx }))
+          .filter(({ rule }) => rule.category === cat);
+
+        const rootItems = catRules.filter(({ rule }) => rule.parentSku === 'ROOT');
+        const subItems = catRules.filter(({ rule }) => rule.parentSku !== 'ROOT');
+
+        const sorted: { rule: CatalogRule; idx: number; isChild: boolean }[] = [];
+        rootItems.forEach((root) => {
+          sorted.push({ ...root, isChild: false });
+          const children = subItems.filter(({ rule }) => rule.parentSku === root.rule.sku);
+          children.forEach((child) => {
+            sorted.push({ ...child, isChild: true });
+          });
+        });
+
+        const handledSkus = new Set(sorted.map((x) => x.rule.sku));
+        subItems.forEach((sub) => {
+          if (!handledSkus.has(sub.rule.sku)) {
+            sorted.push({ ...sub, isChild: true });
+          }
+        });
+
+        return {
+          category: cat,
+          rules: sorted,
+          count: catRules.length,
+        };
+      })
+      .filter((group) => group.count > 0);
+  }, [catalogRules, categories, filterCat]);
+
+  const renderParamBadges = (
+    items: string[] | undefined,
+    colorClass = 'bg-blue-50 text-blue-700 border-blue-200'
+  ) => {
+    if (!items || items.length === 0) {
+      return <span className="text-[10px] text-slate-400">הכל</span>;
+    }
+    return (
+      <div className="flex flex-wrap gap-1 max-w-[150px]">
+        {items.map((item) => (
+          <span
+            key={item}
+            className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap shadow-2xs ${colorClass}`}
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <section className="space-y-5">
@@ -940,144 +1035,275 @@ export default function AdminDashboard({
             </div>
           </div>
 
-          {/* Assemblies Table */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <span className="font-bold text-sm text-slate-800">
-                קטלוג מכלולים ותתי-מכלולים וחוקי גזירה אוטומטיים לטופס המכירות
-              </span>
-              <span className="text-xs text-slate-500">
-                מכלול &quot;לא פעיל&quot; לא יופיע בהזמנות חדשות אך ימשיך להופיע בהזמנות קיימות/ישנות
-              </span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-right text-xs">
-                <thead className="bg-slate-100 text-slate-600 border-b border-slate-200">
-                  <tr>
-                    <th className="py-2.5 px-3">תמונה</th>
-                    <th className="py-2.5 px-3">מק&quot;ט ו-Rev</th>
-                    <th className="py-2.5 px-3">תיאור פריט</th>
-                    <th className="py-2.5 px-3">קטגוריה</th>
-                    <th className="py-2.5 px-3">היררכיה (אב/בן)</th>
-                    <th className="py-2.5 px-3">סטטוס פעילות</th>
-                    <th className="py-2.5 px-3">הספקים</th>
-                    <th className="py-2.5 px-3">אורכי מוקד</th>
-                    <th className="py-2.5 px-3">הזנת חשמל</th>
-                    <th className="py-2.5 px-3">תנאי סביבה</th>
-                    <th className="py-2.5 px-3">שימוש</th>
-                    <th className="py-2.5 px-3">עלות</th>
-                    <th className="py-2.5 px-3 text-center">פעולות</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {filteredCatalogRules.map(({ rule: r, idx }) => {
-                    const isSub = r.parentSku !== 'ROOT';
-                    const isActive = r.active !== false;
-                    return (
-                      <tr
-                        key={`${r.sku}-${r.rev}`}
-                        className={`${
-                          isSub ? 'bg-slate-50/70' : ''
-                        } ${
-                          !isActive ? 'opacity-60 bg-slate-100' : ''
-                        } hover:bg-purple-50/30 transition`}
-                      >
-                        <td className="py-2.5 px-3">
-                          <img
-                            src={getItemImageUrl(r.sku, r.customImg, false)}
-                            alt={r.desc}
-                            className="w-16 h-11 object-cover rounded border border-slate-200 shadow-sm"
-                          />
-                        </td>
-                        <td className="py-2.5 px-3 font-mono font-bold text-slate-800">
-                          <div>{r.sku}</div>
-                          <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-semibold">
-                            {r.rev || 'Rev A'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 font-medium text-slate-800">
-                          {r.desc}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span className="bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-700 font-medium">
-                            {r.category}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3">
-                          {isSub ? (
-                            <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">
-                              ↳ תת-מכלול של {r.parentSku}
-                            </span>
-                          ) : (
-                            <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-bold">
-                              מכלול ראשי (אב)
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          {isActive ? (
-                            <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full text-[11px] font-bold">
-                              🟢 פעיל
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 bg-slate-200 text-slate-700 border border-slate-400 px-2 py-0.5 rounded-full text-[11px] font-bold">
-                              ⏸️ לא פעיל (מוסתר בחדשות)
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3 text-[11px]">
-                          {r.matchPower.join(', ')}
-                        </td>
-                        <td className="py-2.5 px-3 text-[11px]">
-                          {r.matchFocal.join(', ')}
-                        </td>
-                        <td className="py-2.5 px-3 text-[11px]">
-                          {r.matchVoltage.join(', ')}
-                        </td>
-                        <td className="py-2.5 px-3 text-[11px]">
-                          {r.matchEnv.join(', ')}
-                        </td>
-                        <td className="py-2.5 px-3 text-[11px]">
-                          {(r.matchUsage || ALL_USAGES).join(', ')}
-                        </td>
-                        <td className="py-2.5 px-3 font-mono font-bold">
-                          {r.cost}
-                        </td>
-                        <td className="py-2.5 px-3 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleEditRule(idx)}
-                              className="text-blue-600 hover:text-blue-800 font-bold px-2 py-1 rounded bg-blue-50 hover:bg-blue-100"
-                            >
-                              ✏️ ערוך
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleRuleActive(idx)}
+          {/* Assemblies Display Grouped by Category */}
+          <div className="space-y-6">
+            {groupedRulesByCategory.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500 font-medium">
+                לא נמצאו מכלולים תואמים לסינון הקטגוריה שנבחרה.
+              </div>
+            ) : (
+              groupedRulesByCategory.map((group) => (
+                <div
+                  key={group.category}
+                  className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
+                >
+                  {/* Category Header Bar */}
+                  <div className="px-5 py-3 bg-gradient-to-l from-slate-50 to-purple-50/50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base select-none">📁</span>
+                      <h4 className="font-bold text-sm text-slate-900">
+                        קטגוריה: {group.category}
+                      </h4>
+                      <span className="text-xs bg-purple-100 text-purple-800 border border-purple-200 font-bold px-2 py-0.5 rounded-full">
+                        {group.count} מכלולים
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-500">
+                      תתי-מכלולים מוצגים בהזחה ישירות תחת מכלול האב
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right text-xs">
+                      <thead className="bg-slate-100 text-slate-600 text-[11px] uppercase border-b border-slate-200 select-none">
+                        <tr>
+                          <th className="py-2.5 px-3">תמונה</th>
+                          <th className="py-2.5 px-3">מק&quot;ט ו-Rev</th>
+                          <th className="py-2.5 px-3">תיאור פריט</th>
+                          <th className="py-2.5 px-3 text-center">סטטוס</th>
+                          <th className="py-2.5 px-3">הספקים</th>
+                          <th className="py-2.5 px-3">אורכי מוקד</th>
+                          <th className="py-2.5 px-3">הזנת חשמל</th>
+                          <th className="py-2.5 px-3">תנאי סביבה</th>
+                          <th className="py-2.5 px-3">שימוש</th>
+                          <th className="py-2.5 px-3 font-mono">עלות</th>
+                          <th className="py-2.5 px-3 text-center">פעולות</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {group.rules.map(({ rule: r, idx, isChild }) => {
+                          const isActive = r.active !== false;
+                          return (
+                            <tr
+                              key={`${r.sku}-${r.rev}`}
                               className={`${
-                                isActive
-                                  ? 'text-amber-700 bg-amber-50 hover:bg-amber-100'
-                                  : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                              } font-bold px-2 py-1 rounded`}
+                                isChild
+                                  ? 'bg-blue-50/40 border-r-4 border-r-blue-400 hover:bg-blue-100/40'
+                                  : 'hover:bg-purple-50/30'
+                              } ${
+                                !isActive ? 'opacity-65 bg-slate-100/80' : ''
+                              } transition h-[48px]`}
                             >
-                              {isActive ? '⏸️ השבת' : '▶️ הפעל'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openDeleteModal('assembly', idx)}
-                              className="text-red-600 hover:text-red-800 font-bold px-2 py-1 rounded bg-red-50 hover:bg-red-100"
-                            >
-                              🗑️ מחק
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              {/* 1. Image with Zoom-in on hover */}
+                              <td className="py-2 px-3 whitespace-nowrap">
+                                <div className="relative group/img inline-block">
+                                  <img
+                                    src={getItemImageUrl(r.sku, r.customImg, false)}
+                                    alt={r.desc}
+                                    className="w-14 h-9 object-cover rounded border border-slate-200 shadow-2xs cursor-zoom-in hover:border-purple-400 transition bg-white"
+                                  />
+                                  {/* High-res Popover Preview */}
+                                  <div className="absolute z-50 top-1/2 -translate-y-1/2 right-16 hidden group-hover/img:flex flex-col bg-white rounded-xl shadow-2xl border-2 border-purple-300 p-2.5 pointer-events-none w-64 text-right">
+                                    <img
+                                      src={getItemImageUrl(r.sku, r.customImg, false)}
+                                      alt={r.desc}
+                                      className="w-full h-40 object-cover rounded-lg border border-slate-200 bg-slate-50 shadow-inner"
+                                    />
+                                    <div className="mt-2 font-bold text-xs text-slate-900 leading-snug">
+                                      {r.desc}
+                                    </div>
+                                    <div className="text-[11px] font-mono text-purple-700 font-bold mt-0.5">
+                                      {r.sku} ({r.rev || 'Rev A'})
+                                    </div>
+                                    <div className="text-[10px] text-slate-500 mt-0.5">
+                                      עלות: {r.cost}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* 2. SKU and Rev (Offset for sub-assembly) */}
+                              <td
+                                className={`py-2 px-3 font-mono text-slate-800 whitespace-nowrap ${
+                                  isChild ? 'pr-7' : ''
+                                }`}
+                              >
+                                {isChild ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-blue-500 font-bold text-sm leading-none select-none">
+                                      ↳
+                                    </span>
+                                    <span className="font-bold">{r.sku}</span>
+                                  </div>
+                                ) : (
+                                  <div className="font-bold text-slate-900">{r.sku}</div>
+                                )}
+                                <span
+                                  className={`text-[10px] px-1.5 py-0.2 rounded font-normal block w-fit mt-0.5 ${
+                                    isChild
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-200 mr-4'
+                                      : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                  }`}
+                                >
+                                  {r.rev || 'Rev A'}
+                                </span>
+                              </td>
+
+                              {/* 3. Description */}
+                              <td className="py-2 px-3 font-medium text-slate-900">
+                                {r.desc}
+                              </td>
+
+                              {/* 4. Status Indicator (Bulb with Tooltip) */}
+                              <td className="py-2 px-3 text-center whitespace-nowrap">
+                                <div className="relative group/tip inline-flex items-center justify-center">
+                                  {isActive ? (
+                                    <span className="cursor-help text-base select-none leading-none inline-flex items-center justify-center relative">
+                                      <span>💡</span>
+                                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200 absolute -bottom-0.5 -right-0.5 animate-pulse" />
+                                    </span>
+                                  ) : (
+                                    <span className="cursor-help text-base select-none leading-none inline-flex items-center justify-center relative opacity-50 grayscale">
+                                      <span>💡</span>
+                                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-200 absolute -bottom-0.5 -right-0.5" />
+                                    </span>
+                                  )}
+                                  <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-lg shadow-xl p-2 w-48 pointer-events-none border border-slate-700 text-center font-normal">
+                                    {isActive ? (
+                                      <>
+                                        <span className="font-bold text-emerald-400">
+                                          🟢 מכלול פעיל
+                                        </span>
+                                        <span className="text-[10px] text-slate-300">
+                                          זמין לבחירה בהזמנות חדשות
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="font-bold text-red-400">
+                                          🔴 מכלול לא פעיל
+                                        </span>
+                                        <span className="text-[10px] text-slate-300">
+                                          מוסתר בהזמנות חדשות, נשמר בישנות
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* 5-9. Parameters in Badges */}
+                              <td className="py-2 px-3">
+                                {renderParamBadges(
+                                  r.matchPower,
+                                  'bg-blue-50 text-blue-700 border-blue-200'
+                                )}
+                              </td>
+                              <td className="py-2 px-3">
+                                {renderParamBadges(
+                                  r.matchFocal,
+                                  'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                )}
+                              </td>
+                              <td className="py-2 px-3">
+                                {renderParamBadges(
+                                  r.matchVoltage,
+                                  'bg-amber-50 text-amber-800 border-amber-200'
+                                )}
+                              </td>
+                              <td className="py-2 px-3">
+                                {renderParamBadges(
+                                  r.matchEnv,
+                                  'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                )}
+                              </td>
+                              <td className="py-2 px-3">
+                                {renderParamBadges(
+                                  r.matchUsage || ALL_USAGES,
+                                  'bg-purple-50 text-purple-800 border-purple-200'
+                                )}
+                              </td>
+
+                              {/* 10. Cost */}
+                              <td className="py-2 px-3 font-mono font-bold text-slate-800 whitespace-nowrap">
+                                {r.cost}
+                              </td>
+
+                              {/* 11. Actions (Icons only with Tooltips) */}
+                              <td className="py-2 px-3 text-center whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  {/* Edit Button */}
+                                  <div className="relative group/tip inline-flex items-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditRule(idx)}
+                                      className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition text-sm shadow-2xs cursor-pointer"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-md shadow-xl py-1 px-2 pointer-events-none whitespace-nowrap border border-slate-700">
+                                      ערוך מכלול
+                                    </div>
+                                  </div>
+
+                                  {/* Duplicate Button */}
+                                  <div className="relative group/tip inline-flex items-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDuplicateRule(r)}
+                                      className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition text-sm shadow-2xs cursor-pointer"
+                                    >
+                                      📋
+                                    </button>
+                                    <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-md shadow-xl py-1 px-2 pointer-events-none whitespace-nowrap border border-slate-700">
+                                      שכפל מכלול (יצירת עותק חדש)
+                                    </div>
+                                  </div>
+
+                                  {/* Toggle Active Button */}
+                                  <div className="relative group/tip inline-flex items-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleRuleActive(idx)}
+                                      className={`p-1.5 rounded-lg border transition text-sm shadow-2xs cursor-pointer ${
+                                        isActive
+                                          ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
+                                          : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                                      }`}
+                                    >
+                                      {isActive ? '⏸️' : '▶️'}
+                                    </button>
+                                    <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-md shadow-xl py-1 px-2 pointer-events-none whitespace-nowrap border border-slate-700">
+                                      {isActive
+                                        ? 'השבת מכלול (הסתר מהזמנות חדשות)'
+                                        : 'הפעל מכלול (אפשר בהזמנות חדשות)'}
+                                    </div>
+                                  </div>
+
+                                  {/* Delete Button */}
+                                  <div className="relative group/tip inline-flex items-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => openDeleteModal('assembly', idx)}
+                                      className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition text-sm shadow-2xs cursor-pointer"
+                                    >
+                                      🗑️
+                                    </button>
+                                    <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-md shadow-xl py-1 px-2 pointer-events-none whitespace-nowrap border border-slate-700">
+                                      מחק מכלול מהמערכת (העברה לסל מיחזור)
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
@@ -1284,21 +1510,48 @@ export default function AdminDashboard({
                       </h4>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleEditSystem(idx)}
-                      className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-lg border border-blue-200"
-                    >
-                      ✏️ ערוך
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openDeleteModal('system', idx)}
-                      className="text-xs bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2.5 py-1 rounded-lg border border-red-200"
-                    >
-                      🗑️ מחק
-                    </button>
+                  <div className="flex items-center gap-1.5">
+                    {/* Edit System */}
+                    <div className="relative group/tip inline-flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => handleEditSystem(idx)}
+                        className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition text-sm inline-flex items-center justify-center shadow-2xs cursor-pointer"
+                      >
+                        ✏️
+                      </button>
+                      <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-md shadow-xl py-1 px-2 pointer-events-none whitespace-nowrap border border-slate-700">
+                        ערוך מערכת
+                      </div>
+                    </div>
+
+                    {/* Duplicate System */}
+                    <div className="relative group/tip inline-flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => handleDuplicateSystem(s)}
+                        className="p-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 transition text-sm inline-flex items-center justify-center shadow-2xs cursor-pointer"
+                      >
+                        📋
+                      </button>
+                      <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-md shadow-xl py-1 px-2 pointer-events-none whitespace-nowrap border border-slate-700">
+                        שכפל מערכת (יצירת עותק חדש)
+                      </div>
+                    </div>
+
+                    {/* Delete System */}
+                    <div className="relative group/tip inline-flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => openDeleteModal('system', idx)}
+                        className="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg border border-red-200 transition text-sm inline-flex items-center justify-center shadow-2xs cursor-pointer"
+                      >
+                        🗑️
+                      </button>
+                      <div className="absolute z-50 bottom-full mb-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-md shadow-xl py-1 px-2 pointer-events-none whitespace-nowrap border border-slate-700">
+                        מחק מערכת (העברה לסל מיחזור)
+                      </div>
+                    </div>
                   </div>
                 </div>
 
