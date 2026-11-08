@@ -374,7 +374,7 @@ export default function VisualProductTree({
                                               </div>
                                             ) : (
                                               <span className="inline-block bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-semibold">
-                                                ✓ תת-מכלול תואם
+                                                ✓ תואם מכלול אב
                                               </span>
                                             )}
                                           </div>

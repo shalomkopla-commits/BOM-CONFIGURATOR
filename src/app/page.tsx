@@ -154,7 +154,7 @@ export default function HomePage() {
   const [customModalNewRev, setCustomModalNewRev] =
     useState<string>('Rev 1.0');
   const [customModalNewDesc, setCustomModalNewDesc] = useState<string>(
-    'תת-מכלול עדשת זום מיוצבת 500mm (פיתוח מאושר)'
+    'עדשת זום מיוצבת 500mm (פיתוח מאושר)'
   );
 
   const usersList = useMemo(
@@ -690,7 +690,7 @@ export default function HomePage() {
             removed: false,
             lastEditedBy: `${currentUserLabel} (סנכרון אוטומטי)`,
             lastEditedAt: ts,
-            notes: `תת-מכלול מעודכן אוטומטית עבור ${matchedRule.sku}`,
+            notes: `מעודכן אוטומטית עבור ${matchedRule.sku}`,
             imgType: sub.imgType || 'sensor',
             customImg: getItemImageUrl(sub.sku, sub.customImg, false),
           }));
@@ -1011,8 +1011,38 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Connected User Profile Display, Pin Toggle & Sign Out */}
+            {/* Connected User Profile Display, Pin Toggle, Theme Switcher & Sign Out */}
             <div className="flex flex-wrap items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700">
+              {/* Theme Mode Switcher: Light / Dark */}
+              <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-700 shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => toggleThemeMode('light')}
+                  className={`text-xs px-2 py-1 rounded-md font-bold transition flex items-center gap-1 cursor-pointer ${
+                    themeMode === 'light'
+                      ? 'bg-amber-400 text-slate-950 shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="מצב תצוגה בהיר (Light Mode)"
+                >
+                  <span>☀️</span>
+                  <span>Light</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleThemeMode('dark')}
+                  className={`text-xs px-2 py-1 rounded-md font-bold transition flex items-center gap-1 cursor-pointer ${
+                    themeMode === 'dark'
+                      ? 'bg-indigo-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="מצב תצוגה כהה (Dark Mode)"
+                >
+                  <span>🌙</span>
+                  <span>Dark</span>
+                </button>
+              </div>
+
               {/* Pin Header Toggle Button */}
               <button
                 type="button"
@@ -2683,7 +2713,7 @@ export default function HomePage() {
                                             : 'font-semibold text-slate-900'
                                         }`}
                                       >
-                                        {b.desc}
+                                        {cleanSubAssemblyDesc(b.desc)}
                                       </span>
                                       <span
                                         className={`font-mono text-[11px] leading-tight mt-0.5 whitespace-nowrap ${

@@ -543,7 +543,7 @@ export async function exportOrderBomToExcel(
   // Data Rows
   bomRows.forEach((row, idx) => {
     const isSub = row.level === 'sub-assembly';
-    const levelLabel = isSub ? '↳ תת-מכלול (בן)' : 'מכלול ראשי (אב)';
+    const levelLabel = isSub ? '↳ מכלול בן (רמה 2)' : 'מכלול ראשי (אב)';
     const cleanDesc = isSub ? cleanSubAssemblyDesc(row.desc) : row.desc;
 
     let rowStatusLabel = 'פעיל ב-BOM';

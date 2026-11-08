@@ -1111,11 +1111,11 @@ export default function AdminDashboard({
                           <th className="py-2.5 px-3">מק&quot;ט ו-Rev</th>
                           <th className="py-2.5 px-3">תיאור פריט</th>
                           <th className="py-2.5 px-3 text-center">סטטוס</th>
-                          <th className="py-2.5 px-3">הספקים</th>
-                          <th className="py-2.5 px-3">אורכי מוקד</th>
-                          <th className="py-2.5 px-3">הזנת חשמל</th>
-                          <th className="py-2.5 px-3">תנאי סביבה</th>
-                          <th className="py-2.5 px-3">שימוש</th>
+                          <th className="py-2.5 px-3 min-w-[130px]">הספקים</th>
+                          <th className="py-2.5 px-3 min-w-[130px]">אורכי מוקד</th>
+                          <th className="py-2.5 px-3 min-w-[130px]">הזנת חשמל</th>
+                          <th className="py-2.5 px-3 min-w-[130px]">תנאי סביבה</th>
+                          <th className="py-2.5 px-3 min-w-[130px]">שימוש</th>
                           <th className="py-2.5 px-3 font-mono">עלות</th>
                           <th className="py-2.5 px-3 text-center">פעולות</th>
                         </tr>
@@ -1233,31 +1233,31 @@ export default function AdminDashboard({
                               </td>
 
                               {/* 5-9. Parameters in Badges */}
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-3 min-w-[130px]">
                                 {renderParamBadges(
                                   r.matchPower,
                                   'bg-blue-50 text-blue-700 border-blue-200'
                                 )}
                               </td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-3 min-w-[130px]">
                                 {renderParamBadges(
                                   r.matchFocal,
                                   'bg-indigo-50 text-indigo-700 border-indigo-200'
                                 )}
                               </td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-3 min-w-[130px]">
                                 {renderParamBadges(
                                   r.matchVoltage,
                                   'bg-amber-50 text-amber-800 border-amber-200'
                                 )}
                               </td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-3 min-w-[130px]">
                                 {renderParamBadges(
                                   r.matchEnv,
                                   'bg-emerald-50 text-emerald-800 border-emerald-200'
                                 )}
                               </td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-3 min-w-[130px]">
                                 {renderParamBadges(
                                   r.matchUsage || ALL_USAGES,
                                   'bg-purple-50 text-purple-800 border-purple-200'
