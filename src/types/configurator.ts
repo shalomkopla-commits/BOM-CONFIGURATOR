@@ -119,10 +119,12 @@ export interface RecycleBinItem {
 export interface AppUser {
   id: string;
   email: string;
+  username?: string;
+  password?: string;
   fullName: string;
   avatarUrl?: string;
   role: RoleType;
-  provider: 'google';
+  provider: 'google' | 'local';
   active: boolean;
   createdAt: string;
   lastSignInAt: string;

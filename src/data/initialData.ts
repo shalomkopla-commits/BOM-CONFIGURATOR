@@ -37,10 +37,54 @@ export const ROLE_LABELS_HE: Record<RoleType, string> = {
   manager: 'מנהל מערכת',
 };
 
+/**
+ * Strips leading "תת-מכלול" / "תת מכלול" from sub-assembly descriptions
+ * since the hierarchical offset (↳) visually indicates a sub-assembly.
+ */
+export function cleanSubAssemblyDesc(desc: string): string {
+  if (!desc) return '';
+  return desc.replace(/^תת[- ]מכלול\s*/g, '').replace(/ – תת[- ]מכלול\s*/g, ' – ');
+}
+
+/**
+ * Derives default username in "FirstName.LastName" format (e.g. Shalom.kopla)
+ * from a user's full name or email address.
+ */
+export function deriveDefaultUsername(fullName: string, email: string): string {
+  const emailLower = (email || '').trim().toLowerCase();
+  const nameTrim = (fullName || '').trim();
+
+  // Known explicit mappings
+  if (emailLower.includes('shalomkopla')) return 'Shalom.kopla';
+  if (emailLower.includes('haimtou')) return 'Haim.touitou';
+
+  // If fullName is English with space (e.g. "Shalom Kopla" or "Haim Touitou")
+  if (/^[A-Za-z]+(\s+[A-Za-z]+)+$/.test(nameTrim)) {
+    const parts = nameTrim.split(/\s+/);
+    const first = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
+    const last = parts.slice(1).join('').toLowerCase();
+    return `${first}.${last}`;
+  }
+
+  // If email local-part already has a dot (e.g. alon.golan@company.com)
+  const localPart = emailLower.split('@')[0] || 'user';
+  if (localPart.includes('.')) {
+    const parts = localPart.split('.');
+    const first = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
+    const rest = parts.slice(1).join('.').toLowerCase();
+    return `${first}.${rest}`;
+  }
+
+  // Fallback: capitalize first letter of localPart
+  return localPart.charAt(0).toUpperCase() + localPart.slice(1);
+}
+
 export const INITIAL_USERS: AppUser[] = [
   {
     id: 'USR-101',
     email: 'alon.golan@company.com',
+    username: 'Alon.golan',
+    password: '123456',
     fullName: 'אלון גולן',
     role: 'manager',
     provider: 'google',
@@ -52,6 +96,8 @@ export const INITIAL_USERS: AppUser[] = [
   {
     id: 'USR-102',
     email: 'ronit.levi@company.com',
+    username: 'Ronit.levi',
+    password: '123456',
     fullName: 'רונית לוי',
     role: 'procurement',
     provider: 'google',
@@ -63,6 +109,8 @@ export const INITIAL_USERS: AppUser[] = [
   {
     id: 'USR-103',
     email: 'daniel.cohen@company.com',
+    username: 'Daniel.cohen',
+    password: '123456',
     fullName: 'דניאל כהן',
     role: 'sales',
     provider: 'google',
@@ -74,6 +122,8 @@ export const INITIAL_USERS: AppUser[] = [
   {
     id: 'USR-104',
     email: 'yoav.avraham@company.com',
+    username: 'Yoav.avraham',
+    password: '123456',
     fullName: 'יואב אברהם',
     role: 'dev',
     provider: 'google',
@@ -85,6 +135,8 @@ export const INITIAL_USERS: AppUser[] = [
   {
     id: 'USR-105',
     email: 'michal.shapira@company.com',
+    username: 'Michal.shapira',
+    password: '123456',
     fullName: 'מיכל שפירא',
     role: 'viewer',
     provider: 'google',
@@ -92,6 +144,32 @@ export const INITIAL_USERS: AppUser[] = [
     createdAt: '10/10/2026 12:00',
     lastSignInAt: '07/11/2026 11:45',
     updatedBy: 'Google Sign-In (אוטומטי - צופה)',
+  },
+  {
+    id: 'USR-107',
+    email: 'haimtou@gmail.com',
+    username: 'Haim.touitou',
+    password: '123456',
+    fullName: 'Haim Touitou',
+    role: 'manager',
+    provider: 'google',
+    active: true,
+    createdAt: '08/11/2026 10:00',
+    lastSignInAt: '08/11/2026 14:00',
+    updatedBy: 'שלום קופלה (מנהל מערכת)',
+  },
+  {
+    id: 'USR-108',
+    email: 'shalomkopla@gmail.com',
+    username: 'Shalom.kopla',
+    password: '123456',
+    fullName: 'Shalom Kopla',
+    role: 'manager',
+    provider: 'google',
+    active: true,
+    createdAt: '07/11/2026 20:00',
+    lastSignInAt: '08/11/2026 23:00',
+    updatedBy: 'מערכת (מנהל מערכת)',
   },
 ];
 
@@ -220,7 +298,7 @@ export const INITIAL_CATALOG_RULES: CatalogRule[] = [
   {
     sku: 'SUB-OPT-LENS',
     rev: 'Rev A',
-    desc: 'תת-מכלול עדשת מיקוד אופטית',
+    desc: 'עדשת מיקוד אופטית',
     category: 'אופטיקה ולייזר',
     parentSku: 'OPT-MOD-100',
     matchPower: [...ALL_POWERS],
@@ -236,7 +314,7 @@ export const INITIAL_CATALOG_RULES: CatalogRule[] = [
   {
     sku: 'SUB-OPT-CLM',
     rev: 'Rev A',
-    desc: 'תת-מכלול קולימטור ומייצב קרן',
+    desc: 'קולימטור ומייצב קרן',
     category: 'אופטיקה ולייזר',
     parentSku: 'OPT-MOD-100',
     matchPower: [...ALL_POWERS],
@@ -270,7 +348,7 @@ export const INITIAL_CATALOG_RULES: CatalogRule[] = [
   {
     sku: 'SUB-PSU1-EMI',
     rev: 'Rev A',
-    desc: 'תת-מכלול פילטר EMI לספק כוח A',
+    desc: 'פילטר EMI לספק כוח A',
     category: 'ספקי כוח והזנה',
     parentSku: 'PSU-MOD-100',
     matchPower: [...ALL_POWERS],
@@ -286,7 +364,7 @@ export const INITIAL_CATALOG_RULES: CatalogRule[] = [
   {
     sku: 'SUB-PSU1-REG',
     rev: 'Rev A',
-    desc: 'תת-מכלול כרטיס ייצוב מתח לספק כוח A',
+    desc: 'כרטיס ייצוב מתח לספק כוח A',
     category: 'ספקי כוח והזנה',
     parentSku: 'PSU-MOD-100',
     matchPower: [...ALL_POWERS],
@@ -318,7 +396,7 @@ export const INITIAL_CATALOG_RULES: CatalogRule[] = [
   {
     sku: 'SUB-PSU2-PFC',
     rev: 'Rev A',
-    desc: 'תת-מכלול תיקון מקדם הספק (PFC) לספק B',
+    desc: 'תיקון מקדם הספק (PFC) לספק B',
     category: 'ספקי כוח והזנה',
     parentSku: 'PSU-MOD-200',
     matchPower: [...ALL_POWERS],
@@ -334,7 +412,7 @@ export const INITIAL_CATALOG_RULES: CatalogRule[] = [
   {
     sku: 'SUB-PSU2-SURG',
     rev: 'Rev A',
-    desc: 'תת-מכלול הגנת נחשולי מתח לספק B',
+    desc: 'הגנת נחשולי מתח לספק B',
     category: 'ספקי כוח והזנה',
     parentSku: 'PSU-MOD-200',
     matchPower: [...ALL_POWERS],
@@ -368,7 +446,7 @@ export const INITIAL_CATALOG_RULES: CatalogRule[] = [
   {
     sku: 'SUB-ENC-SEAL',
     rev: 'Rev A',
-    desc: 'תת-מכלול אטמים ומיגון אבק/מים',
+    desc: 'אטמים ומיגון אבק/מים',
     category: 'מארז ומיגון סביבתי',
     parentSku: 'ENC-MOD-100',
     matchPower: [...ALL_POWERS],
@@ -384,7 +462,7 @@ export const INITIAL_CATALOG_RULES: CatalogRule[] = [
   {
     sku: 'SUB-ENC-FAN',
     rev: 'Rev A',
-    desc: 'תת-מכלול יחידת אוורור ופיזור חום',
+    desc: 'יחידת אוורור ופיזור חום',
     category: 'מארז ומיגון סביבתי',
     parentSku: 'ENC-MOD-100',
     matchPower: [...ALL_POWERS],
@@ -418,7 +496,7 @@ export const INITIAL_CATALOG_RULES: CatalogRule[] = [
   {
     sku: 'SUB-CTL-CPU',
     rev: 'Rev A',
-    desc: 'תת-מכלול כרטיס עיבוד ובקרה מהיר',
+    desc: 'כרטיס עיבוד ובקרה מהיר',
     category: 'בקרה ותקשורת',
     parentSku: 'CTL-MOD-100',
     matchPower: [...ALL_POWERS],
@@ -434,7 +512,7 @@ export const INITIAL_CATALOG_RULES: CatalogRule[] = [
   {
     sku: 'SUB-CTL-COM',
     rev: 'Rev A',
-    desc: 'תת-מכלול מודול תקשורת אופטית ו-Ethernet',
+    desc: 'מודול תקשורת אופטית ו-Ethernet',
     category: 'בקרה ותקשורת',
     parentSku: 'CTL-MOD-100',
     matchPower: [...ALL_POWERS],
@@ -531,7 +609,7 @@ export const INITIAL_ORDERS: Order[] = [
         parentId: 'B1',
         sku: 'CUSTOM-LENS-500',
         rev: 'TBD (פיתוח)',
-        desc: 'תת-מכלול עדשת מיקוד (אחר: 500mm זום מיוצב)',
+        desc: 'עדשת מיקוד (אחר: 500mm זום מיוצב)',
         qty: 1,
         selectionType: 'דרישת פיתוח (Custom)',
         alternatives: ['נדרש תכנון הנדסי ופתיחת מק"ט'],
@@ -554,11 +632,11 @@ export const INITIAL_ORDERS: Order[] = [
         parentId: 'B1',
         sku: 'SUB-OPT-CLM',
         rev: 'Rev A',
-        desc: 'תת-מכלול קולימטור ומייצב קרן',
+        desc: 'קולימטור ומייצב קרן',
         qty: 1,
         selectionType: 'פריט מוגדר',
-        alternatives: ['SUB-OPT-CLM – תת-מכלול קולימטור ומייצב קרן (Rev A)'],
-        selectedAlt: 'SUB-OPT-CLM – תת-מכלול קולימטור ומייצב קרן (Rev A)',
+        alternatives: ['SUB-OPT-CLM – קולימטור ומייצב קרן (Rev A)'],
+        selectedAlt: 'SUB-OPT-CLM – קולימטור ומייצב קרן (Rev A)',
         isCustom: false,
         approved: true,
         rowLocked: true,
@@ -566,7 +644,7 @@ export const INITIAL_ORDERS: Order[] = [
         removed: false,
         lastEditedBy: 'מערכת (גזירה אוטומטית)',
         lastEditedAt: '03/11/2026 09:40',
-        notes: 'תת-מכלול 2 של OPT-MOD-100',
+        notes: 'שייך ל-OPT-MOD-100',
         imgType: 'sensor',
         customImg: '/images/assemblies/SUB-OPT-CLM.png',
       },
@@ -603,11 +681,11 @@ export const INITIAL_ORDERS: Order[] = [
         parentId: 'B4',
         sku: 'SUB-PSU1-EMI',
         rev: 'Rev A',
-        desc: 'תת-מכלול פילטר EMI לספק כוח A',
+        desc: 'פילטר EMI לספק כוח A',
         qty: 2,
         selectionType: 'פריט מוגדר',
-        alternatives: ['SUB-PSU1-EMI – תת-מכלול פילטר EMI לספק כוח A (Rev A)'],
-        selectedAlt: 'SUB-PSU1-EMI – תת-מכלול פילטר EMI לספק כוח A (Rev A)',
+        alternatives: ['SUB-PSU1-EMI – פילטר EMI לספק כוח A (Rev A)'],
+        selectedAlt: 'SUB-PSU1-EMI – פילטר EMI לספק כוח A (Rev A)',
         isCustom: false,
         approved: true,
         rowLocked: true,
@@ -615,7 +693,7 @@ export const INITIAL_ORDERS: Order[] = [
         removed: false,
         lastEditedBy: 'מערכת (גזירה אוטומטית)',
         lastEditedAt: '03/11/2026 09:40',
-        notes: 'תת-מכלול 1 של PSU-MOD-100',
+        notes: 'שייך ל-PSU-MOD-100',
         imgType: 'board',
         customImg: '/images/assemblies/SUB-PSU1-EMI.png',
       },
@@ -626,11 +704,11 @@ export const INITIAL_ORDERS: Order[] = [
         parentId: 'B4',
         sku: 'SUB-PSU1-REG',
         rev: 'Rev A',
-        desc: 'תת-מכלול כרטיס ייצוב מתח לספק כוח A',
+        desc: 'כרטיס ייצוב מתח לספק כוח A',
         qty: 2,
         selectionType: 'פריט מוגדר',
-        alternatives: ['SUB-PSU1-REG – תת-מכלול כרטיס ייצוב מתח לספק כוח A (Rev A)'],
-        selectedAlt: 'SUB-PSU1-REG – תת-מכלול כרטיס ייצוב מתח לספק כוח A (Rev A)',
+        alternatives: ['SUB-PSU1-REG – כרטיס ייצוב מתח לספק כוח A (Rev A)'],
+        selectedAlt: 'SUB-PSU1-REG – כרטיס ייצוב מתח לספק כוח A (Rev A)',
         isCustom: false,
         approved: true,
         rowLocked: true,
@@ -638,7 +716,7 @@ export const INITIAL_ORDERS: Order[] = [
         removed: false,
         lastEditedBy: 'מערכת (גזירה אוטומטית)',
         lastEditedAt: '03/11/2026 09:40',
-        notes: 'תת-מכלול 2 של PSU-MOD-100',
+        notes: 'שייך ל-PSU-MOD-100',
         imgType: 'board',
         customImg: '/images/assemblies/SUB-PSU1-REG.png',
       },
@@ -672,11 +750,11 @@ export const INITIAL_ORDERS: Order[] = [
         parentId: 'B6',
         sku: 'SUB-ENC-SEAL',
         rev: 'Rev A',
-        desc: 'תת-מכלול אטמים ומיגון אבק/מים',
+        desc: 'אטמים ומיגון אבק/מים',
         qty: 1,
         selectionType: 'פריט מוגדר',
-        alternatives: ['SUB-ENC-SEAL – תת-מכלול אטמים ומיגון אבק/מים (Rev A)'],
-        selectedAlt: 'SUB-ENC-SEAL – תת-מכלול אטמים ומיגון אבק/מים (Rev A)',
+        alternatives: ['SUB-ENC-SEAL – אטמים ומיגון אבק/מים (Rev A)'],
+        selectedAlt: 'SUB-ENC-SEAL – אטמים ומיגון אבק/מים (Rev A)',
         isCustom: false,
         approved: true,
         rowLocked: true,
@@ -684,7 +762,7 @@ export const INITIAL_ORDERS: Order[] = [
         removed: false,
         lastEditedBy: 'מערכת (גזירה אוטומטית)',
         lastEditedAt: '03/11/2026 09:40',
-        notes: 'תת-מכלול 1 של מארז',
+        notes: 'שייך למארז',
         imgType: 'sensor',
         customImg: '/images/assemblies/SUB-ENC-SEAL.png',
       },
@@ -695,11 +773,11 @@ export const INITIAL_ORDERS: Order[] = [
         parentId: 'B6',
         sku: 'SUB-ENC-FAN',
         rev: 'Rev A',
-        desc: 'תת-מכלול יחידת אוורור ופיזור חום',
+        desc: 'יחידת אוורור ופיזור חום',
         qty: 1,
         selectionType: 'פריט מוגדר',
-        alternatives: ['SUB-ENC-FAN – תת-מכלול יחידת אוורור ופיזור חום (Rev A)'],
-        selectedAlt: 'SUB-ENC-FAN – תת-מכלול יחידת אוורור ופיזור חום (Rev A)',
+        alternatives: ['SUB-ENC-FAN – יחידת אוורור ופיזור חום (Rev A)'],
+        selectedAlt: 'SUB-ENC-FAN – יחידת אוורור ופיזור חום (Rev A)',
         isCustom: false,
         approved: true,
         rowLocked: true,
@@ -707,7 +785,7 @@ export const INITIAL_ORDERS: Order[] = [
         removed: false,
         lastEditedBy: 'מערכת (גזירה אוטומטית)',
         lastEditedAt: '03/11/2026 09:40',
-        notes: 'תת-מכלול 2 של מארז',
+        notes: 'שייך למארז',
         imgType: 'power',
         customImg: '/images/assemblies/SUB-ENC-FAN.png',
       },
@@ -741,11 +819,11 @@ export const INITIAL_ORDERS: Order[] = [
         parentId: 'B7',
         sku: 'SUB-CTL-CPU',
         rev: 'Rev A',
-        desc: 'תת-מכלול כרטיס עיבוד ובקרה מהיר',
+        desc: 'כרטיס עיבוד ובקרה מהיר',
         qty: 1,
         selectionType: 'פריט מוגדר',
-        alternatives: ['SUB-CTL-CPU – תת-מכלול כרטיס עיבוד ובקרה מהיר (Rev A)'],
-        selectedAlt: 'SUB-CTL-CPU – תת-מכלול כרטיס עיבוד ובקרה מהיר (Rev A)',
+        alternatives: ['SUB-CTL-CPU – כרטיס עיבוד ובקרה מהיר (Rev A)'],
+        selectedAlt: 'SUB-CTL-CPU – כרטיס עיבוד ובקרה מהיר (Rev A)',
         isCustom: false,
         approved: true,
         rowLocked: true,
@@ -753,7 +831,7 @@ export const INITIAL_ORDERS: Order[] = [
         removed: false,
         lastEditedBy: 'מערכת (גזירה אוטומטית)',
         lastEditedAt: '03/11/2026 09:40',
-        notes: 'תת-מכלול 1 של CTL-MOD-100',
+        notes: 'שייך ל-CTL-MOD-100',
         imgType: 'board',
         customImg: '/images/assemblies/SUB-CTL-CPU.png',
       },
@@ -764,11 +842,11 @@ export const INITIAL_ORDERS: Order[] = [
         parentId: 'B7',
         sku: 'SUB-CTL-COM',
         rev: 'Rev A',
-        desc: 'תת-מכלול מודול תקשורת אופטית ו-Ethernet',
+        desc: 'מודול תקשורת אופטית ו-Ethernet',
         qty: 1,
         selectionType: 'פריט מוגדר',
-        alternatives: ['SUB-CTL-COM – תת-מכלול מודול תקשורת אופטית ו-Ethernet (Rev A)'],
-        selectedAlt: 'SUB-CTL-COM – תת-מכלול מודול תקשורת אופטית ו-Ethernet (Rev A)',
+        alternatives: ['SUB-CTL-COM – מודול תקשורת אופטית ו-Ethernet (Rev A)'],
+        selectedAlt: 'SUB-CTL-COM – מודול תקשורת אופטית ו-Ethernet (Rev A)',
         isCustom: false,
         approved: true,
         rowLocked: true,
@@ -776,7 +854,7 @@ export const INITIAL_ORDERS: Order[] = [
         removed: false,
         lastEditedBy: 'מערכת (גזירה אוטומטית)',
         lastEditedAt: '03/11/2026 09:40',
-        notes: 'תת-מכלול 2 של CTL-MOD-100',
+        notes: 'שייך ל-CTL-MOD-100',
         imgType: 'sensor',
         customImg: '/images/assemblies/SUB-CTL-COM.png',
       },

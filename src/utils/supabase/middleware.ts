@@ -48,19 +48,23 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Also check if user authenticated via Username + Password (bom_local_auth cookie)
+  const hasLocalAuthCookie = Boolean(request.cookies.get('bom_local_auth')?.value);
+  const isAuthenticated = Boolean(user) || hasLocalAuthCookie;
+
   const pathname = request.nextUrl.pathname;
   const isPublicRoute =
     pathname.startsWith('/login') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/images');
 
-  if (!user && !isPublicRoute) {
+  if (!isAuthenticated && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname.startsWith('/login')) {
+  if (isAuthenticated && pathname.startsWith('/login')) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);

@@ -10,6 +10,8 @@ import {
   RoleType,
 } from '@/types/configurator';
 import {
+  cleanSubAssemblyDesc,
+  deriveDefaultUsername,
   getItemImageUrl,
   INITIAL_STATE,
   INITIAL_USERS,
@@ -58,7 +60,25 @@ export default function HomePage() {
     useState<string>('ORD-2026-102');
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState<boolean>(false);
   const [isHeaderPinned, setIsHeaderPinned] = useState<boolean>(true);
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
   const headerLeaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = window.localStorage.getItem('bom_theme_mode');
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        setThemeMode(savedTheme);
+      }
+    }
+  }, []);
+
+  const toggleThemeMode = (mode?: 'light' | 'dark') => {
+    const next = mode || (themeMode === 'light' ? 'dark' : 'light');
+    setThemeMode(next);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('bom_theme_mode', next);
+    }
+  };
 
   const handleHeaderMouseEnter = () => {
     if (headerLeaveTimerRef.current) {
@@ -900,7 +920,13 @@ export default function HomePage() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900">
+    <div
+      className={`min-h-screen flex flex-col transition-colors duration-200 ${
+        themeMode === 'dark'
+          ? 'dark-theme bg-slate-950 text-slate-100'
+          : 'bg-slate-100 text-slate-900'
+      }`}
+    >
       {/* TOP BAR WITH SHUTTER ACCORDION */}
       <header
         onMouseEnter={handleHeaderMouseEnter}
@@ -1961,15 +1987,31 @@ export default function HomePage() {
                           {/* Root System in Preview */}
                           <div className="p-2.5 rounded-lg flex justify-between items-center bg-blue-950/80 border border-blue-700">
                             <div className="flex items-center gap-2.5">
-                              <img
-                                src={getItemImageUrl(
-                                  selectedSysObj?.id || 'SYS-STD-100',
-                                  null,
-                                  false
-                                )}
-                                alt={selectedSysObj?.name || 'מערכת'}
-                                className="w-10 h-8 object-cover rounded border border-blue-500 bg-white"
-                              />
+                              <div className="relative group/img inline-block">
+                                <img
+                                  src={getItemImageUrl(
+                                    selectedSysObj?.id || 'SYS-STD-100',
+                                    null,
+                                    false
+                                  )}
+                                  alt={selectedSysObj?.name || 'מערכת'}
+                                  className="w-10 h-8 object-cover rounded border border-blue-500 bg-white cursor-zoom-in"
+                                />
+                                <div className="absolute z-50 top-1/2 -translate-y-1/2 right-12 hidden group-hover/img:flex flex-col bg-white rounded-xl shadow-2xl border-2 border-blue-400 p-2 pointer-events-none w-56 text-right">
+                                  <img
+                                    src={getItemImageUrl(
+                                      selectedSysObj?.id || 'SYS-STD-100',
+                                      null,
+                                      false
+                                    )}
+                                    alt={selectedSysObj?.name || 'מערכת'}
+                                    className="w-full h-32 object-cover rounded-lg border border-slate-200"
+                                  />
+                                  <div className="mt-1.5 font-bold text-xs text-slate-900">
+                                    {selectedSysObj?.name}
+                                  </div>
+                                </div>
+                              </div>
                               <div>
                                 <span className="font-bold text-blue-300">
                                   🖥️ [מערכת על (Root)]
@@ -1999,15 +2041,34 @@ export default function HomePage() {
                               }`}
                             >
                               <div className="flex items-center gap-2.5">
-                                <img
-                                  src={getItemImageUrl(
-                                    b.sku,
-                                    b.customImg,
-                                    b.isCustom
-                                  )}
-                                  alt={b.desc}
-                                  className="w-10 h-8 object-cover rounded border border-slate-600"
-                                />
+                                <div className="relative group/img inline-block">
+                                  <img
+                                    src={getItemImageUrl(
+                                      b.sku,
+                                      b.customImg,
+                                      b.isCustom
+                                    )}
+                                    alt={b.desc}
+                                    className="w-10 h-8 object-cover rounded border border-slate-600 cursor-zoom-in"
+                                  />
+                                  <div className="absolute z-50 top-1/2 -translate-y-1/2 right-12 hidden group-hover/img:flex flex-col bg-white rounded-xl shadow-2xl border-2 border-slate-400 p-2 pointer-events-none w-56 text-right">
+                                    <img
+                                      src={getItemImageUrl(
+                                        b.sku,
+                                        b.customImg,
+                                        b.isCustom
+                                      )}
+                                      alt={b.desc}
+                                      className="w-full h-32 object-cover rounded-lg border border-slate-200"
+                                    />
+                                    <div className="mt-1.5 font-bold text-xs text-slate-900">
+                                      {cleanSubAssemblyDesc(b.desc)}
+                                    </div>
+                                    <div className="text-[11px] font-mono text-blue-700 font-bold">
+                                      {b.sku} ({b.rev || 'Rev A'})
+                                    </div>
+                                  </div>
+                                </div>
                                 <div>
                                   <span
                                     className={`font-bold ${
@@ -2411,15 +2472,34 @@ export default function HomePage() {
                           {/* 0. Root System Level 0 Row (חלק בלתי נפרד מה-BOM) */}
                           <tr className="bg-blue-50/70 border-b-2 border-blue-200 hover:bg-blue-100/60 font-medium h-[46px]">
                             <td className="py-2 px-3 whitespace-nowrap">
-                              <img
-                                src={getItemImageUrl(
-                                  currentOrder.systemTypeId || 'SYS-STD-100',
-                                  null,
-                                  false
-                                )}
-                                alt={currentOrder.systemName}
-                                className="w-14 h-9 object-cover rounded border border-blue-300 shadow-sm bg-white"
-                              />
+                              <div className="relative group/img inline-block">
+                                <img
+                                  src={getItemImageUrl(
+                                    currentOrder.systemTypeId || 'SYS-STD-100',
+                                    null,
+                                    false
+                                  )}
+                                  alt={currentOrder.systemName}
+                                  className="w-14 h-9 object-cover rounded border border-blue-300 shadow-sm bg-white cursor-zoom-in hover:border-blue-500 transition"
+                                />
+                                <div className="absolute z-50 top-1/2 -translate-y-1/2 right-16 hidden group-hover/img:flex flex-col bg-white rounded-xl shadow-2xl border-2 border-blue-400 p-2.5 pointer-events-none w-64 text-right">
+                                  <img
+                                    src={getItemImageUrl(
+                                      currentOrder.systemTypeId || 'SYS-STD-100',
+                                      null,
+                                      false
+                                    )}
+                                    alt={currentOrder.systemName}
+                                    className="w-full h-40 object-cover rounded-lg border border-slate-200 bg-slate-50 shadow-inner"
+                                  />
+                                  <div className="mt-2 font-bold text-xs text-slate-900 leading-snug">
+                                    {currentOrder.systemName}
+                                  </div>
+                                  <div className="text-[11px] font-mono text-blue-700 font-bold mt-0.5">
+                                    {currentOrder.systemTypeId || 'SYS-STD-100'} (Rev A)
+                                  </div>
+                                </div>
+                              </div>
                             </td>
                             <td className="py-2 px-3 whitespace-nowrap">
                               <div className="font-bold text-blue-900 text-xs">
@@ -2547,15 +2627,37 @@ export default function HomePage() {
                             return (
                               <tr key={b.id} className={rowClass}>
                                 <td className="py-2 px-3 whitespace-nowrap">
-                                  <img
-                                    src={getItemImageUrl(
-                                      b.sku,
-                                      b.customImg,
-                                      b.isCustom
-                                    )}
-                                    alt={b.desc}
-                                    className="w-14 h-9 object-cover rounded border border-slate-200 shadow-2xs"
-                                  />
+                                  <div className="relative group/img inline-block">
+                                    <img
+                                      src={getItemImageUrl(
+                                        b.sku,
+                                        b.customImg,
+                                        b.isCustom
+                                      )}
+                                      alt={b.desc}
+                                      className="w-14 h-9 object-cover rounded border border-slate-200 shadow-2xs cursor-zoom-in hover:border-blue-400 transition bg-white"
+                                    />
+                                    <div className="absolute z-50 top-1/2 -translate-y-1/2 right-16 hidden group-hover/img:flex flex-col bg-white rounded-xl shadow-2xl border-2 border-slate-300 p-2.5 pointer-events-none w-64 text-right">
+                                      <img
+                                        src={getItemImageUrl(
+                                          b.sku,
+                                          b.customImg,
+                                          b.isCustom
+                                        )}
+                                        alt={b.desc}
+                                        className="w-full h-40 object-cover rounded-lg border border-slate-200 bg-slate-50 shadow-inner"
+                                      />
+                                      <div className="mt-2 font-bold text-xs text-slate-900 leading-snug">
+                                        {cleanSubAssemblyDesc(b.desc)}
+                                      </div>
+                                      <div className="text-[11px] font-mono text-blue-700 font-bold mt-0.5">
+                                        {b.sku} ({b.rev || 'Rev A'})
+                                      </div>
+                                      <div className="text-[10px] text-slate-500 mt-0.5">
+                                        כמות: {b.qty} • קטגוריה: {b.category}
+                                      </div>
+                                    </div>
+                                  </div>
                                 </td>
                                 <td className="py-2 px-3 whitespace-nowrap">
                                   {isSub ? (

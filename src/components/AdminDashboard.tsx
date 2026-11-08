@@ -16,6 +16,8 @@ import {
   ALL_POWERS,
   ALL_USAGES,
   ALL_VOLTAGES,
+  cleanSubAssemblyDesc,
+  deriveDefaultUsername,
   getItemImageUrl,
   ROLE_LABELS_HE,
 } from '@/data/initialData';
@@ -60,12 +62,16 @@ export default function AdminDashboard({
 
   // --- Tab F: User Management State ---
   const [newUserName, setNewUserName] = useState<string>('');
+  const [newUserUsername, setNewUserUsername] = useState<string>('');
+  const [newUserPassword, setNewUserPassword] = useState<string>('123456');
   const [newUserEmail, setNewUserEmail] = useState<string>('');
   const [newUserRole, setNewUserRole] = useState<RoleType>('viewer');
 
   // User Edit Modal State
   const [editingUserIdx, setEditingUserIdx] = useState<number>(-1);
   const [editUserName, setEditUserName] = useState<string>('');
+  const [editUserUsername, setEditUserUsername] = useState<string>('');
+  const [editUserPassword, setEditUserPassword] = useState<string>('123456');
   const [editUserEmail, setEditUserEmail] = useState<string>('');
   const [editUserRole, setEditUserRole] = useState<RoleType>('viewer');
   const [editUserActive, setEditUserActive] = useState<boolean>(true);
@@ -73,6 +79,8 @@ export default function AdminDashboard({
   const startEditUser = (u: AppUser, idx: number) => {
     setEditingUserIdx(idx);
     setEditUserName(u.fullName);
+    setEditUserUsername(u.username || deriveDefaultUsername(u.fullName, u.email));
+    setEditUserPassword(u.password || '123456');
     setEditUserEmail(u.email);
     setEditUserRole(u.role);
     setEditUserActive(u.active);
@@ -81,20 +89,26 @@ export default function AdminDashboard({
   const handleSaveEditedUser = () => {
     if (editingUserIdx < 0 || !users[editingUserIdx]) return;
     const nameTrim = editUserName.trim();
-    const emailTrim = editUserEmail.trim().toLowerCase();
+    const usernameTrim =
+      editUserUsername.trim() ||
+      deriveDefaultUsername(nameTrim, editUserEmail.trim());
+    const passwordTrim = editUserPassword.trim() || '123456';
+    const emailTrim =
+      editUserEmail.trim().toLowerCase() ||
+      `${usernameTrim.toLowerCase()}@local.company`;
     if (!nameTrim) {
       alert('נא להזין שם מלא.');
       return;
     }
-    if (!emailTrim || !emailTrim.includes('@')) {
-      alert('נא להזין כתובת אימייל תקנית.');
-      return;
-    }
     const duplicate = users.some(
-      (u, i) => i !== editingUserIdx && u.email.toLowerCase() === emailTrim
+      (u, i) =>
+        i !== editingUserIdx &&
+        (u.email.toLowerCase() === emailTrim ||
+          (u.username || deriveDefaultUsername(u.fullName, u.email)).toLowerCase() ===
+            usernameTrim.toLowerCase())
     );
     if (duplicate) {
-      alert('כתובת אימייל זו כבר קיימת עבור משתמש אחר במערכת.');
+      alert('שם משתמש או כתובת אימייל אלו כבר קיימים עבור משתמש אחר במערכת.');
       return;
     }
 
@@ -102,6 +116,8 @@ export default function AdminDashboard({
     nextUsers[editingUserIdx] = {
       ...nextUsers[editingUserIdx],
       fullName: nameTrim,
+      username: usernameTrim,
+      password: passwordTrim,
       email: emailTrim,
       role: editUserRole,
       active: editUserActive,
@@ -127,6 +143,7 @@ export default function AdminDashboard({
   };
 
   // --- Tab A: Catalog Rules State ---
+  const [isRuleFormOpen, setIsRuleFormOpen] = useState<boolean>(false);
   const [filterCat, setFilterCat] = useState<string>('ALL');
   const [newCatInput, setNewCatInput] = useState<string>('');
   const [editingRuleIdx, setEditingRuleIdx] = useState<number>(-1);
@@ -147,6 +164,7 @@ export default function AdminDashboard({
   const [ruleUsages, setRuleUsages] = useState<string[]>([...ALL_USAGES]);
 
   // --- Tab B: System Types State ---
+  const [isSysFormOpen, setIsSysFormOpen] = useState<boolean>(false);
   const [editingSysIdx, setEditingSysIdx] = useState<number>(-1);
   const [sysId, setSysId] = useState<string>('');
   const [sysName, setSysName] = useState<string>('');
@@ -210,10 +228,11 @@ export default function AdminDashboard({
   const handleEditRule = (idx: number) => {
     const r = catalogRules[idx];
     if (!r) return;
+    setIsRuleFormOpen(true);
     setEditingRuleIdx(idx);
     setRuleSku(r.sku);
     setRuleRev(r.rev || 'Rev A');
-    setRuleDesc(r.desc);
+    setRuleDesc(r.parentSku !== 'ROOT' ? cleanSubAssemblyDesc(r.desc) : r.desc);
     setRuleCategory(r.category);
     setRuleParent(r.parentSku);
     setRuleCost(r.cost);
@@ -224,13 +243,15 @@ export default function AdminDashboard({
     setRuleVoltages([...r.matchVoltage]);
     setRuleEnvs([...r.matchEnv]);
     setRuleUsages([...(r.matchUsage || ALL_USAGES)]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDuplicateRule = (r: CatalogRule) => {
+    setIsRuleFormOpen(true);
     setEditingRuleIdx(-1);
     setRuleSku(`${r.sku}-COPY`);
     setRuleRev(r.rev || 'Rev A');
-    setRuleDesc(`העתק של ${r.desc}`);
+    setRuleDesc(`העתק של ${r.parentSku !== 'ROOT' ? cleanSubAssemblyDesc(r.desc) : r.desc}`);
     setRuleCategory(r.category);
     setRuleParent(r.parentSku);
     setRuleCost(r.cost);
@@ -357,6 +378,7 @@ export default function AdminDashboard({
   const handleEditSystem = (idx: number) => {
     const s = systemTypes[idx];
     if (!s) return;
+    setIsSysFormOpen(true);
     setEditingSysIdx(idx);
     setSysId(s.id);
     setSysName(s.name);
@@ -369,9 +391,11 @@ export default function AdminDashboard({
     setSysPsuCount(s.psuCount);
     setSysCustomImg(s.customImg);
     setSysCatQty({ ...s.catQty });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDuplicateSystem = (s: SystemType) => {
+    setIsSysFormOpen(true);
     setEditingSysIdx(-1);
     setSysId(`${s.id}-COPY`);
     setSysName(`העתק של ${s.name}`);
@@ -683,11 +707,11 @@ export default function AdminDashboard({
       return <span className="text-[10px] text-slate-400">הכל</span>;
     }
     return (
-      <div className="flex flex-wrap gap-1 max-w-[150px]">
+      <div className="flex flex-wrap items-center gap-1 min-w-[140px]">
         {items.map((item) => (
           <span
             key={item}
-            className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap shadow-2xs ${colorClass}`}
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap shadow-2xs ${colorClass}`}
           >
             {item}
           </span>
@@ -797,22 +821,34 @@ export default function AdminDashboard({
       {/* TAB A: Assemblies & Selection Rules */}
       {activeTab === 'rules' && (
         <div className="space-y-5">
-          {/* Add / Edit Assembly Form */}
-          <div className="bg-white rounded-xl border-2 border-purple-200 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-purple-900">
-                {editingRuleIdx >= 0
-                  ? `עריכת מכלול קיים: ${ruleSku}`
-                  : '+ הוספת מכלול / תת-מכלול חדש והגדרת חוק בחירה'}
-              </h3>
+          {/* Add / Edit Assembly Form (Collapsible Accordion) */}
+          <div className="bg-white rounded-xl border-2 border-purple-200 shadow-sm overflow-hidden">
+            <div
+              onClick={() => setIsRuleFormOpen((prev) => !prev)}
+              className="px-5 py-3.5 bg-gradient-to-l from-purple-50/70 to-white flex items-center justify-between cursor-pointer hover:bg-purple-50/90 transition select-none"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="w-6 h-6 rounded-lg bg-purple-600 text-white font-bold flex items-center justify-center text-sm shadow-2xs">
+                  {isRuleFormOpen ? '−' : '+'}
+                </span>
+                <h3 className="text-sm font-bold text-purple-900">
+                  {editingRuleIdx >= 0
+                    ? `עריכת מכלול קיים: ${ruleSku}`
+                    : 'הוספת מכלול / תת-מכלול חדש והגדרת חוק בחירה'}
+                </h3>
+              </div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] bg-purple-50 text-purple-800 border border-purple-200 px-2.5 py-0.5 rounded-full font-medium">
-                  ברירת מחדל: כל ההספקים | כל אורכי המוקד | 230V AC | כל תנאי הסביבה | כל השימושים
+                <span className="text-[11px] text-purple-700 font-semibold">
+                  {isRuleFormOpen ? 'לחץ לסגירת הטופס ▲' : 'לחץ לפתיחת טופס הוספה ▼'}
                 </span>
                 {editingRuleIdx >= 0 && (
                   <button
                     type="button"
-                    onClick={resetRuleForm}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      resetRuleForm();
+                      setIsRuleFormOpen(false);
+                    }}
                     className="text-xs text-slate-600 hover:text-slate-900 bg-slate-100 px-3 py-1 rounded-lg font-semibold"
                   >
                     ביטול עריכה
@@ -821,177 +857,181 @@ export default function AdminDashboard({
               </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-3 items-end text-xs mb-3">
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  מק&quot;ט (SKU)
-                </label>
-                <input
-                  type="text"
-                  value={ruleSku}
-                  onChange={(e) => setRuleSku(e.target.value)}
-                  placeholder="למשל: OPT-300"
-                  className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 font-mono bg-white"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  מהדורה (Rev)
-                </label>
-                <input
-                  type="text"
-                  value={ruleRev}
-                  onChange={(e) => setRuleRev(e.target.value)}
-                  placeholder="Rev A"
-                  className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 font-mono bg-white"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  שם / תיאור המכלול
-                </label>
-                <input
-                  type="text"
-                  value={ruleDesc}
-                  onChange={(e) => setRuleDesc(e.target.value)}
-                  placeholder="תיאור המכלול..."
-                  className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  קטגוריה
-                </label>
-                <select
-                  value={ruleCategory}
-                  onChange={(e) => setRuleCategory(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-2 py-1.5 bg-white"
-                >
-                  {categories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  מיקום בהיררכיה
-                </label>
-                <select
-                  value={ruleParent}
-                  onChange={(e) => setRuleParent(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-2 py-1.5 bg-white"
-                >
-                  <option value="ROOT">מכלול ראשי (אב)</option>
-                  {rootAssemblies.map((r) => (
-                    <option key={r.sku} value={r.sku}>
-                      תת-מכלול תחת {r.sku} ({r.desc})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  עלות ותמונה
-                </label>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="text"
-                    value={ruleCost}
-                    onChange={(e) => setRuleCost(e.target.value)}
-                    className="w-20 border border-slate-300 rounded-lg px-2 py-1.5 font-mono bg-white"
-                  />
-                  <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg font-semibold flex items-center gap-1">
-                    <span>📷 תמונה</span>
+            {isRuleFormOpen && (
+              <div className="p-5 border-t border-purple-100">
+                <div className="grid grid-cols-7 gap-3 items-end text-xs mb-3">
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      מק&quot;ט (SKU)
+                    </label>
                     <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleImageUpload(e, 'rule')}
+                      type="text"
+                      value={ruleSku}
+                      onChange={(e) => setRuleSku(e.target.value)}
+                      placeholder="למשל: OPT-300"
+                      className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 font-mono bg-white"
                     />
-                  </label>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      מהדורה (Rev)
+                    </label>
+                    <input
+                      type="text"
+                      value={ruleRev}
+                      onChange={(e) => setRuleRev(e.target.value)}
+                      placeholder="Rev A"
+                      className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 font-mono bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      שם / תיאור המכלול
+                    </label>
+                    <input
+                      type="text"
+                      value={ruleDesc}
+                      onChange={(e) => setRuleDesc(e.target.value)}
+                      placeholder="תיאור המכלול..."
+                      className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      קטגוריה
+                    </label>
+                    <select
+                      value={ruleCategory}
+                      onChange={(e) => setRuleCategory(e.target.value)}
+                      className="w-full border border-slate-300 rounded-lg px-2 py-1.5 bg-white"
+                    >
+                      {categories.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      מיקום בהיררכיה
+                    </label>
+                    <select
+                      value={ruleParent}
+                      onChange={(e) => setRuleParent(e.target.value)}
+                      className="w-full border border-slate-300 rounded-lg px-2 py-1.5 bg-white"
+                    >
+                      <option value="ROOT">מכלול ראשי (אב)</option>
+                      {rootAssemblies.map((r) => (
+                        <option key={r.sku} value={r.sku}>
+                          תת-מכלול תחת {r.sku} ({r.desc})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      עלות ותמונה
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={ruleCost}
+                        onChange={(e) => setRuleCost(e.target.value)}
+                        className="w-20 border border-slate-300 rounded-lg px-2 py-1.5 font-mono bg-white"
+                      />
+                      <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg font-semibold flex items-center gap-1">
+                        <span>📷 תמונה</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleImageUpload(e, 'rule')}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      סטטוס פעילות
+                    </label>
+                    <label className="flex items-center gap-2 border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={ruleActive}
+                        onChange={(e) => setRuleActive(e.target.checked)}
+                        className="rounded text-emerald-600"
+                      />
+                      <span className="font-bold text-slate-700">
+                        מכלול פעיל (להזמנות חדשות)
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-6 gap-3 items-end text-xs pt-2 border-t border-slate-100">
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      מתאים להספקים
+                    </label>
+                    <MultiSelectDropdown
+                      options={ALL_POWERS.map((v) => ({ value: v }))}
+                      selected={rulePowers}
+                      onChange={setRulePowers}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      מתאים לאורכי מוקד
+                    </label>
+                    <MultiSelectDropdown
+                      options={ALL_FOCALS.map((v) => ({ value: v }))}
+                      selected={ruleFocals}
+                      onChange={setRuleFocals}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      מתאים להזנת חשמל
+                    </label>
+                    <MultiSelectDropdown
+                      options={ALL_VOLTAGES.map((v) => ({ value: v }))}
+                      selected={ruleVoltages}
+                      onChange={setRuleVoltages}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      מתאים לתנאי סביבה
+                    </label>
+                    <MultiSelectDropdown
+                      options={ALL_ENVS.map((v) => ({ value: v }))}
+                      selected={ruleEnvs}
+                      onChange={setRuleEnvs}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      מתאים לשימוש
+                    </label>
+                    <MultiSelectDropdown
+                      options={ALL_USAGES.map((v) => ({ value: v }))}
+                      selected={ruleUsages}
+                      onChange={setRuleUsages}
+                    />
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={handleSaveRule}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg shadow transition"
+                    >
+                      {editingRuleIdx >= 0 ? '💾 עדכן מכלול' : '+ הוסף מכלול'}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  סטטוס פעילות
-                </label>
-                <label className="flex items-center gap-2 border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={ruleActive}
-                    onChange={(e) => setRuleActive(e.target.checked)}
-                    className="rounded text-emerald-600"
-                  />
-                  <span className="font-bold text-slate-700">
-                    מכלול פעיל (להזמנות חדשות)
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-6 gap-3 items-end text-xs pt-2 border-t border-slate-100">
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  מתאים להספקים
-                </label>
-                <MultiSelectDropdown
-                  options={ALL_POWERS.map((v) => ({ value: v }))}
-                  selected={rulePowers}
-                  onChange={setRulePowers}
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  מתאים לאורכי מוקד
-                </label>
-                <MultiSelectDropdown
-                  options={ALL_FOCALS.map((v) => ({ value: v }))}
-                  selected={ruleFocals}
-                  onChange={setRuleFocals}
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  מתאים להזנת חשמל
-                </label>
-                <MultiSelectDropdown
-                  options={ALL_VOLTAGES.map((v) => ({ value: v }))}
-                  selected={ruleVoltages}
-                  onChange={setRuleVoltages}
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  מתאים לתנאי סביבה
-                </label>
-                <MultiSelectDropdown
-                  options={ALL_ENVS.map((v) => ({ value: v }))}
-                  selected={ruleEnvs}
-                  onChange={setRuleEnvs}
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  מתאים לשימוש
-                </label>
-                <MultiSelectDropdown
-                  options={ALL_USAGES.map((v) => ({ value: v }))}
-                  selected={ruleUsages}
-                  onChange={setRuleUsages}
-                />
-              </div>
-              <div>
-                <button
-                  type="button"
-                  onClick={handleSaveRule}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg shadow transition"
-                >
-                  {editingRuleIdx >= 0 ? '💾 עדכן מכלול' : '+ הוסף מכלול'}
-                </button>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Category Filter + Add Category Bar (ממוקם מתחת לאזור הוספת מכלול ומעל טבלת המכלולים) */}
@@ -1110,7 +1150,7 @@ export default function AdminDashboard({
                                       className="w-full h-40 object-cover rounded-lg border border-slate-200 bg-slate-50 shadow-inner"
                                     />
                                     <div className="mt-2 font-bold text-xs text-slate-900 leading-snug">
-                                      {r.desc}
+                                      {isChild ? cleanSubAssemblyDesc(r.desc) : r.desc}
                                     </div>
                                     <div className="text-[11px] font-mono text-purple-700 font-bold mt-0.5">
                                       {r.sku} ({r.rev || 'Rev A'})
@@ -1151,7 +1191,7 @@ export default function AdminDashboard({
 
                               {/* 3. Description */}
                               <td className="py-2 px-3 font-medium text-slate-900">
-                                {r.desc}
+                                {isChild ? cleanSubAssemblyDesc(r.desc) : r.desc}
                               </td>
 
                               {/* 4. Status Indicator (Bulb with Tooltip) */}
@@ -1311,181 +1351,204 @@ export default function AdminDashboard({
       {/* TAB B: System Types */}
       {activeTab === 'systems' && (
         <div className="space-y-5">
-          <div className="bg-white rounded-xl border-2 border-purple-200 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-sm font-bold text-purple-900">
-                  {editingSysIdx >= 0
-                    ? `עריכת מערכת: ${sysId}`
-                    : '+ הוספת מערכת חדשה / הגדרת פרטי מערכת מותרים'}
-                </h3>
-                <p className="text-xs text-slate-500">
+          {/* Collapsible Add / Edit System Form */}
+          <div className="bg-white rounded-xl border-2 border-purple-200 shadow-sm overflow-hidden">
+            <div
+              onClick={() => setIsSysFormOpen((prev) => !prev)}
+              className="px-5 py-3.5 bg-gradient-to-l from-purple-50/70 to-white flex items-center justify-between cursor-pointer hover:bg-purple-50/90 transition select-none"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="w-6 h-6 rounded-lg bg-purple-600 text-white font-bold flex items-center justify-center text-sm shadow-2xs">
+                  {isSysFormOpen ? '−' : '+'}
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-purple-900">
+                    {editingSysIdx >= 0
+                      ? `עריכת מערכת: ${sysId}`
+                      : 'הוספת מערכת חדשה / הגדרת פרטי מערכת מותרים'}
+                  </h3>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-purple-700 font-semibold">
+                  {isSysFormOpen ? 'לחץ לסגירת הטופס ▲' : 'לחץ לפתיחת טופס הוספה ▼'}
+                </span>
+                {editingSysIdx >= 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      resetSystemForm();
+                      setIsSysFormOpen(false);
+                    }}
+                    className="text-xs text-slate-600 bg-slate-100 px-3 py-1 rounded-lg font-semibold"
+                  >
+                    ביטול עריכה
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {isSysFormOpen && (
+              <div className="p-5 border-t border-purple-100">
+                <p className="text-xs text-slate-500 mb-3">
                   הגדר אילו ערכים מותרים עבור מערכת זו. בטופס פתיחת ההזמנה המשתמש יוכל לבחור רק מתוך הערכים המוגדרים כאן (או לבחור &quot;אחר&quot; לפיתוח).
                 </p>
-              </div>
-              {editingSysIdx >= 0 && (
-                <button
-                  type="button"
-                  onClick={resetSystemForm}
-                  className="text-xs text-slate-600 bg-slate-100 px-3 py-1 rounded-lg font-semibold"
-                >
-                  ביטול עריכה
-                </button>
-              )}
-            </div>
 
-            <div className="grid grid-cols-6 gap-3 items-end text-xs mb-3">
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  קוד מערכת (ID)
-                </label>
-                <input
-                  type="text"
-                  value={sysId}
-                  onChange={(e) => setSysId(e.target.value)}
-                  placeholder="SYS-NEW-300"
-                  className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 font-mono bg-white"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  שם המערכת
-                </label>
-                <input
-                  type="text"
-                  value={sysName}
-                  onChange={(e) => setSysName(e.target.value)}
-                  placeholder="שם מערכת..."
-                  className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  הספקים מותרים במערכת
-                </label>
-                <MultiSelectDropdown
-                  options={ALL_POWERS.map((v) => ({ value: v }))}
-                  selected={sysPowers}
-                  onChange={setSysPowers}
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  אורכי מוקד מותרים
-                </label>
-                <MultiSelectDropdown
-                  options={ALL_FOCALS.map((v) => ({ value: v }))}
-                  selected={sysFocals}
-                  onChange={setSysFocals}
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  הזנות חשמל מותרות
-                </label>
-                <MultiSelectDropdown
-                  options={ALL_VOLTAGES.map((v) => ({ value: v }))}
-                  selected={sysVoltages}
-                  onChange={setSysVoltages}
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  תנאי סביבה מותרים
-                </label>
-                <MultiSelectDropdown
-                  options={ALL_ENVS.map((v) => ({ value: v }))}
-                  selected={sysEnvs}
-                  onChange={setSysEnvs}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-6 gap-3 items-end text-xs pt-2 border-t border-slate-100">
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  שימושים מותרים
-                </label>
-                <MultiSelectDropdown
-                  options={ALL_USAGES.map((v) => ({ value: v }))}
-                  selected={sysUsages}
-                  onChange={setSysUsages}
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  כמות ערוצים / ספקים
-                </label>
-                <div className="flex gap-1.5">
-                  <input
-                    type="number"
-                    min={1}
-                    value={sysChannels}
-                    onChange={(e) => setSysChannels(Number(e.target.value))}
-                    className="w-1/2 border border-slate-300 rounded-lg px-2 py-1.5 text-center bg-white"
-                    title="ערוצים"
-                  />
-                  <input
-                    type="number"
-                    min={1}
-                    value={sysPsuCount}
-                    onChange={(e) => setSysPsuCount(Number(e.target.value))}
-                    className="w-1/2 border border-slate-300 rounded-lg px-2 py-1.5 text-center bg-white"
-                    title="ספקים"
-                  />
+                <div className="grid grid-cols-6 gap-3 items-end text-xs mb-3">
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      קוד מערכת (ID)
+                    </label>
+                    <input
+                      type="text"
+                      value={sysId}
+                      onChange={(e) => setSysId(e.target.value)}
+                      placeholder="SYS-NEW-300"
+                      className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 font-mono bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      שם המערכת
+                    </label>
+                    <input
+                      type="text"
+                      value={sysName}
+                      onChange={(e) => setSysName(e.target.value)}
+                      placeholder="שם מערכת..."
+                      className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      הספקים מותרים במערכת
+                    </label>
+                    <MultiSelectDropdown
+                      options={ALL_POWERS.map((v) => ({ value: v }))}
+                      selected={sysPowers}
+                      onChange={setSysPowers}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      אורכי מוקד מותרים
+                    </label>
+                    <MultiSelectDropdown
+                      options={ALL_FOCALS.map((v) => ({ value: v }))}
+                      selected={sysFocals}
+                      onChange={setSysFocals}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      הזנות חשמל מותרות
+                    </label>
+                    <MultiSelectDropdown
+                      options={ALL_VOLTAGES.map((v) => ({ value: v }))}
+                      selected={sysVoltages}
+                      onChange={setSysVoltages}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      תנאי סביבה מותרים
+                    </label>
+                    <MultiSelectDropdown
+                      options={ALL_ENVS.map((v) => ({ value: v }))}
+                      selected={sysEnvs}
+                      onChange={setSysEnvs}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="col-span-2">
-                <label className="block font-semibold text-slate-600 mb-1">
-                  כמות מכלולים נדרשת לכל קטגוריה
-                </label>
-                <div className="grid grid-cols-2 gap-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                  {categories.map((cat) => (
-                    <div
-                      key={cat}
-                      className="flex items-center justify-between gap-1 text-[11px]"
-                    >
-                      <span className="truncate">{cat}:</span>
+
+                <div className="grid grid-cols-6 gap-3 items-end text-xs pt-2 border-t border-slate-100">
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      שימושים מותרים
+                    </label>
+                    <MultiSelectDropdown
+                      options={ALL_USAGES.map((v) => ({ value: v }))}
+                      selected={sysUsages}
+                      onChange={setSysUsages}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      כמות ערוצים / ספקים
+                    </label>
+                    <div className="flex gap-1.5">
                       <input
                         type="number"
-                        min={0}
-                        value={sysCatQty[cat] ?? 1}
-                        onChange={(e) =>
-                          setSysCatQty((prev) => ({
-                            ...prev,
-                            [cat]: Number(e.target.value),
-                          }))
-                        }
-                        className="w-12 border border-slate-300 rounded px-1 py-0.5 text-center font-bold bg-white"
+                        min={1}
+                        value={sysChannels}
+                        onChange={(e) => setSysChannels(Number(e.target.value))}
+                        className="w-1/2 border border-slate-300 rounded-lg px-2 py-1.5 text-center bg-white"
+                        title="ערוצים"
+                      />
+                      <input
+                        type="number"
+                        min={1}
+                        value={sysPsuCount}
+                        onChange={(e) => setSysPsuCount(Number(e.target.value))}
+                        className="w-1/2 border border-slate-300 rounded-lg px-2 py-1.5 text-center bg-white"
+                        title="ספקים"
                       />
                     </div>
-                  ))}
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      כמות מכלולים נדרשת לכל קטגוריה
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                      {categories.map((cat) => (
+                        <div
+                          key={cat}
+                          className="flex items-center justify-between gap-1 text-[11px]"
+                        >
+                          <span className="truncate">{cat}:</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={sysCatQty[cat] ?? 1}
+                            onChange={(e) =>
+                              setSysCatQty((prev) => ({
+                                ...prev,
+                                [cat]: Number(e.target.value),
+                              }))
+                            }
+                            className="w-12 border border-slate-300 rounded px-1 py-0.5 text-center font-bold bg-white"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">
+                      תמונת מערכת
+                    </label>
+                    <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-semibold flex items-center justify-center gap-1">
+                      <span>📷 העלה תמונה</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleImageUpload(e, 'system')}
+                      />
+                    </label>
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={handleSaveSystem}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg shadow transition"
+                    >
+                      {editingSysIdx >= 0 ? '💾 עדכן מערכת' : '💾 שמור מערכת'}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">
-                  תמונת מערכת
-                </label>
-                <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-semibold flex items-center justify-center gap-1">
-                  <span>📷 העלה תמונה</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleImageUpload(e, 'system')}
-                  />
-                </label>
-              </div>
-              <div>
-                <button
-                  type="button"
-                  onClick={handleSaveSystem}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg shadow transition"
-                >
-                  {editingSysIdx >= 0 ? '💾 עדכן מערכת' : '💾 שמור מערכת'}
-                </button>
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -1905,7 +1968,7 @@ export default function AdminDashboard({
                             <span className="font-mono font-bold bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5 rounded">
                               {s.sku}
                             </span>{' '}
-                            {s.desc} (תחת {s.parentSku})
+                            {cleanSubAssemblyDesc(s.desc)} (תחת {s.parentSku})
                           </div>
                         ))}
                       </td>
@@ -2024,63 +2087,96 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* TAB F: User Management & Google Sign-In Roles */}
+      {/* TAB F: User Management & Roles (Google Sign-In + Username/Password) */}
       {activeTab === 'users' && (
         <div className="space-y-5">
-          {/* Info & Add Pre-Authorized Google User Box */}
+          {/* Info & Add User Box (Supports users with or without a Google account) */}
           <div className="bg-white rounded-xl border-2 border-purple-200 shadow-sm p-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-bold text-purple-900">
-                    👥 ניהול משתמשים והרשאות (התחברות באמצעות חשבון Google)
+                    👥 ניהול משתמשים והרשאות (חשבון Google או שם משתמש וסיסמה)
                   </h3>
                   <span className="text-[11px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 rounded-full font-bold">
-                    ✓ משתמש חדש ב-Sign In מוגדר אוטומטית כ&quot;צופה&quot; (Viewer)
+                    ✓ סיסמת ברירת מחדל: 123456
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 mt-1">
-                  כל משתמש שמתחבר למערכת דרך חשבון Google מתווסף אוטומטית לטבלה זו בתפקיד <strong>&quot;צופה&quot; (קריאה בלבד)</strong>. מנהל המערכת יכול לשנות כאן את תפקיד המשתמש לכל תפקיד אחר במערכת.
+                  ניתן להוסיף כאן משתמשים חדשים גם אם <strong>אין להם חשבון Google</strong> (כניסה באמצעות שם משתמש בפורמט <code className="font-mono bg-slate-100 px-1 rounded">FirstName.LastName</code> וסיסמה). משתמשים חדשים שנכנסים עצמאית דרך Google מוגדרים אוטומטית כ<strong>&quot;צופה&quot;</strong>.
                 </p>
               </div>
             </div>
 
-            {/* Add Google User Form */}
-            <div className="grid grid-cols-4 gap-3 items-end text-xs">
+            {/* Add User Form */}
+            <div className="grid grid-cols-6 gap-3 items-end text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  שם מלא של המשתמש
+                  שם מלא של המשתמש *
                 </label>
                 <input
                   type="text"
                   value={newUserName}
-                  onChange={(e) => setNewUserName(e.target.value)}
-                  placeholder="למשל: נועה ברק"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNewUserName(val);
+                    if (!newUserUsername && /^[A-Za-z]+(\s+[A-Za-z]+)+$/.test(val.trim())) {
+                      setNewUserUsername(deriveDefaultUsername(val, newUserEmail));
+                    }
+                  }}
+                  placeholder="למשל: Noa Barak / נועה ברק"
+                  className="w-full border border-slate-300 rounded-lg px-2.5 py-2 bg-white"
                 />
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  כתובת חשבון Google (Gmail / Workspace)
+                  שם משתמש (FirstName.LastName) *
+                </label>
+                <input
+                  type="text"
+                  value={newUserUsername}
+                  onChange={(e) => setNewUserUsername(e.target.value)}
+                  placeholder="למשל: Noa.barak"
+                  dir="ltr"
+                  className="w-full border border-slate-300 rounded-lg px-2.5 py-2 font-mono text-left bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  סיסמה (ברירת מחדל: 123456)
+                </label>
+                <input
+                  type="text"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  placeholder="123456"
+                  dir="ltr"
+                  className="w-full border border-slate-300 rounded-lg px-2.5 py-2 font-mono text-left bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  אימייל / Google (אופציונלי)
                 </label>
                 <input
                   type="email"
                   value={newUserEmail}
                   onChange={(e) => setNewUserEmail(e.target.value)}
-                  placeholder="noa.barak@gmail.com"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 font-mono bg-white"
+                  placeholder="noa.barak@gmail.com (לא חובה)"
+                  dir="ltr"
+                  className="w-full border border-slate-300 rounded-lg px-2.5 py-2 font-mono text-left bg-white"
                 />
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  תפקיד במערכת (ברירת מחדל: צופה)
+                  תפקיד במערכת
                 </label>
                 <select
                   value={newUserRole}
                   onChange={(e) => setNewUserRole(e.target.value as RoleType)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white font-bold"
+                  className="w-full border border-slate-300 rounded-lg px-2.5 py-2 bg-white font-bold"
                 >
-                  <option value="viewer">👁️ צופה (שירות לקוחות / ייצור) – ברירת מחדל</option>
+                  <option value="viewer">👁️ צופה (ברירת מחדל)</option>
                   <option value="sales">💼 איש מכירות</option>
                   <option value="procurement">📦 איש רכש / תפ&quot;י</option>
                   <option value="dev">🔧 איש פיתוח / הנדסה</option>
@@ -2091,23 +2187,52 @@ export default function AdminDashboard({
                 <button
                   type="button"
                   onClick={() => {
-                    const emailTrim = newUserEmail.trim().toLowerCase();
                     const nameTrim = newUserName.trim();
-                    if (!emailTrim || !emailTrim.includes('@')) {
-                      alert('נא להזין כתובת אימייל תקנית של חשבון Google.');
+                    const usernameTrim =
+                      newUserUsername.trim() ||
+                      deriveDefaultUsername(nameTrim, newUserEmail.trim());
+                    const passwordTrim = newUserPassword.trim() || '123456';
+                    const rawEmail = newUserEmail.trim().toLowerCase();
+                    const emailFinal =
+                      rawEmail && rawEmail.includes('@')
+                        ? rawEmail
+                        : `${usernameTrim.toLowerCase()}@local.company`;
+
+                    if (!nameTrim && !usernameTrim) {
+                      alert('נא להזין שם מלא ושם משתמש.');
                       return;
                     }
-                    if (users.some((u) => u.email.toLowerCase() === emailTrim)) {
-                      alert('משתמש עם כתובת Google זו כבר קיים במערכת.');
+                    if (
+                      users.some(
+                        (u) =>
+                          u.email.toLowerCase() === emailFinal ||
+                          (
+                            u.username ||
+                            deriveDefaultUsername(u.fullName, u.email)
+                          ).toLowerCase() === usernameTrim.toLowerCase()
+                      )
+                    ) {
+                      alert('משתמש עם שם משתמש או אימייל זה כבר קיים במערכת.');
                       return;
                     }
+
+                    let maxIdNum = 100;
+                    users.forEach((u) => {
+                      if (u.id.startsWith('USR-')) {
+                        const n = parseInt(u.id.replace('USR-', ''), 10);
+                        if (!isNaN(n) && n > maxIdNum) maxIdNum = n;
+                      }
+                    });
+
                     const ts = getNowTimestamp();
                     const addedUser: AppUser = {
-                      id: `USR-${100 + users.length + 1}`,
-                      email: emailTrim,
-                      fullName: nameTrim || emailTrim.split('@')[0],
+                      id: `USR-${maxIdNum + 1}`,
+                      email: emailFinal,
+                      username: usernameTrim,
+                      password: passwordTrim,
+                      fullName: nameTrim || usernameTrim,
                       role: newUserRole,
-                      provider: 'google',
+                      provider: rawEmail ? 'google' : 'local',
                       active: true,
                       createdAt: ts,
                       lastSignInAt: 'טרם התחבר',
@@ -2115,12 +2240,14 @@ export default function AdminDashboard({
                     };
                     onUpdateState({ users: [addedUser, ...users] });
                     setNewUserName('');
+                    setNewUserUsername('');
+                    setNewUserPassword('123456');
                     setNewUserEmail('');
                     setNewUserRole('viewer');
                   }}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow transition"
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg shadow transition cursor-pointer"
                 >
-                  + הוסף משתמש Google
+                  + הוסף משתמש
                 </button>
               </div>
             </div>
@@ -2131,14 +2258,14 @@ export default function AdminDashboard({
             <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-sm text-slate-900">
-                  רשימת משתמשי המערכת והגדרת תפקידים (Role Assignment)
+                  רשימת משתמשי המערכת, פרטי כניסה והגדרת תפקידים
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   שינוי תפקיד בטבלה מעדכן מיידית את הרשאות המשתמש במערכת ובמסד הנתונים (Supabase).
                 </p>
               </div>
               <span className="text-xs font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                {users.length} משתמשי Google רשומים
+                {users.length} משתמשים רשומים
               </span>
             </div>
 
@@ -2147,7 +2274,8 @@ export default function AdminDashboard({
                 <thead className="bg-slate-100 text-slate-600 border-b border-slate-200">
                   <tr>
                     <th className="py-2.5 px-3">משתמש</th>
-                    <th className="py-2.5 px-3">חשבון Google (Email)</th>
+                    <th className="py-2.5 px-3">שם משתמש וסיסמה</th>
+                    <th className="py-2.5 px-3">אימייל / חשבון Google</th>
                     <th className="py-2.5 px-3">הגדרת תפקיד במערכת (ע&quot;י מנהל)</th>
                     <th className="py-2.5 px-3 text-center">סטטוס</th>
                     <th className="py-2.5 px-3">הצטרפות / התחברות אחרונה</th>
@@ -2156,148 +2284,167 @@ export default function AdminDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {users.map((u, idx) => (
-                    <tr
-                      key={u.id}
-                      className={`hover:bg-slate-50 transition ${
-                        !u.active ? 'opacity-60 bg-slate-100' : ''
-                      }`}
-                    >
-                      <td className="py-2.5 px-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold flex items-center justify-center text-xs shadow-sm">
-                            {u.fullName.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900">
-                              {u.fullName}
+                  {users.map((u, idx) => {
+                    const displayUsername =
+                      u.username || deriveDefaultUsername(u.fullName, u.email);
+                    const displayPassword = u.password || '123456';
+                    return (
+                      <tr
+                        key={u.id}
+                        className={`hover:bg-slate-50 transition ${
+                          !u.active ? 'opacity-60 bg-slate-100' : ''
+                        }`}
+                      >
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold flex items-center justify-center text-xs shadow-sm">
+                              {u.fullName.charAt(0)}
                             </div>
-                            <div className="text-[10px] font-mono text-slate-400">
-                              {u.id}
+                            <div>
+                              <div className="font-bold text-slate-900">
+                                {u.fullName}
+                              </div>
+                              <div className="text-[10px] font-mono text-slate-400">
+                                {u.id}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-3 font-mono font-semibold text-slate-700">
-                        {u.email}
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <select
-                          value={u.role}
-                          onChange={(e) => {
-                            const nextRole = e.target.value as RoleType;
-                            const nextUsers = [...users];
-                            nextUsers[idx] = {
-                              ...u,
-                              role: nextRole,
-                              updatedBy: `${currentUserLabel} (${getNowTimestamp()})`,
-                            };
-                            onUpdateState({ users: nextUsers });
-                          }}
-                          className={`border-2 rounded-lg px-2.5 py-1 font-bold text-xs bg-white shadow-sm ${
-                            u.role === 'manager'
-                              ? 'border-purple-400 text-purple-900'
-                              : u.role === 'procurement'
-                              ? 'border-emerald-400 text-emerald-900'
-                              : u.role === 'sales'
-                              ? 'border-blue-400 text-blue-900'
-                              : u.role === 'dev'
-                              ? 'border-orange-400 text-orange-900'
-                              : 'border-slate-300 text-slate-700'
-                          }`}
-                        >
-                          <option value="viewer">
-                            👁️ צופה (שירות לקוחות / ייצור)
-                          </option>
-                          <option value="sales">💼 איש מכירות</option>
-                          <option value="procurement">📦 איש רכש / תפ&quot;י</option>
-                          <option value="dev">🔧 איש פיתוח / הנדסה</option>
-                          <option value="manager">⚙️ מנהל מערכת</option>
-                        </select>
-                      </td>
-                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                        {u.active ? (
-                          <span
-                            className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 text-sm shadow-2xs cursor-help"
-                            title="משתמש פעיל"
-                          >
-                            💡
-                          </span>
-                        ) : (
-                          <span
-                            className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-600 text-sm shadow-2xs cursor-help"
-                            title="משתמש לא פעיל (מושהה)"
-                          >
-                            💡
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3 text-[11px] text-slate-600">
-                        <div>
-                          הצטרף: <span className="font-mono">{u.createdAt}</span>
-                        </div>
-                        <div>
-                          כניסה אחרונה:{' '}
-                          <span className="font-mono font-semibold text-slate-800">
-                            {u.lastSignInAt}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-3 text-[11px] text-slate-600">
-                        {u.updatedBy || 'Google Sign-In (אוטומטי)'}
-                      </td>
-                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {onSelectActiveUser && u.active && (
-                            <button
-                              type="button"
-                              onClick={() => onSelectActiveUser(u)}
-                              className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition text-sm shadow-2xs inline-flex items-center justify-center"
-                              title={`החלף חיבור פעיל אל ${u.fullName} (${ROLE_LABELS_HE[u.role]})`}
-                            >
-                              🔑
-                            </button>
+                        </td>
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <div className="font-mono font-bold text-purple-900 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded w-fit">
+                            {displayUsername}
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                            סיסמה: <strong>{displayPassword}</strong>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3 font-mono font-semibold text-slate-700">
+                          {u.email.endsWith('@local.company') ? (
+                            <span className="text-slate-400 text-[11px] font-sans">
+                              ללא חשבון Google (מקומי)
+                            </span>
+                          ) : (
+                            u.email
                           )}
-                          <button
-                            type="button"
-                            onClick={() => startEditUser(u, idx)}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition text-sm shadow-2xs inline-flex items-center justify-center"
-                            title="ערוך פרטי משתמש"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <select
+                            value={u.role}
+                            onChange={(e) => {
+                              const nextRole = e.target.value as RoleType;
                               const nextUsers = [...users];
                               nextUsers[idx] = {
                                 ...u,
-                                active: !u.active,
+                                role: nextRole,
                                 updatedBy: `${currentUserLabel} (${getNowTimestamp()})`,
                               };
                               onUpdateState({ users: nextUsers });
                             }}
-                            className={`p-1.5 rounded-lg transition text-sm shadow-2xs inline-flex items-center justify-center ${
-                              u.active
-                                ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
-                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            className={`border-2 rounded-lg px-2.5 py-1 font-bold text-xs bg-white shadow-sm ${
+                              u.role === 'manager'
+                                ? 'border-purple-400 text-purple-900'
+                                : u.role === 'procurement'
+                                ? 'border-emerald-400 text-emerald-900'
+                                : u.role === 'sales'
+                                ? 'border-blue-400 text-blue-900'
+                                : u.role === 'dev'
+                                ? 'border-orange-400 text-orange-900'
+                                : 'border-slate-300 text-slate-700'
                             }`}
-                            title={u.active ? 'השהה משתמש' : 'הפעל משתמש'}
                           >
-                            {u.active ? '⏸️' : '▶️'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteUser(idx)}
-                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition text-sm shadow-2xs inline-flex items-center justify-center"
-                            title="מחק משתמש מהמערכת"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            <option value="viewer">
+                              👁️ צופה (שירות לקוחות / ייצור)
+                            </option>
+                            <option value="sales">💼 איש מכירות</option>
+                            <option value="procurement">📦 איש רכש / תפ&quot;י</option>
+                            <option value="dev">🔧 איש פיתוח / הנדסה</option>
+                            <option value="manager">⚙️ מנהל מערכת</option>
+                          </select>
+                        </td>
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                          {u.active ? (
+                            <span
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 text-sm shadow-2xs cursor-help"
+                              title="משתמש פעיל"
+                            >
+                              💡
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-600 text-sm shadow-2xs cursor-help"
+                              title="משתמש לא פעיל (מושהה)"
+                            >
+                              💡
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-[11px] text-slate-600">
+                          <div>
+                            הצטרף: <span className="font-mono">{u.createdAt}</span>
+                          </div>
+                          <div>
+                            כניסה אחרונה:{' '}
+                            <span className="font-mono font-semibold text-slate-800">
+                              {u.lastSignInAt}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3 text-[11px] text-slate-600">
+                          {u.updatedBy || 'Google Sign-In (אוטומטי)'}
+                        </td>
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {onSelectActiveUser && u.active && (
+                              <button
+                                type="button"
+                                onClick={() => onSelectActiveUser(u)}
+                                className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition text-sm shadow-2xs inline-flex items-center justify-center"
+                                title={`החלף חיבור פעיל אל ${u.fullName} (${ROLE_LABELS_HE[u.role]})`}
+                              >
+                                🔑
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => startEditUser(u, idx)}
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition text-sm shadow-2xs inline-flex items-center justify-center"
+                              title="ערוך פרטי משתמש"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextUsers = [...users];
+                                nextUsers[idx] = {
+                                  ...u,
+                                  active: !u.active,
+                                  updatedBy: `${currentUserLabel} (${getNowTimestamp()})`,
+                                };
+                                onUpdateState({ users: nextUsers });
+                              }}
+                              className={`p-1.5 rounded-lg transition text-sm shadow-2xs inline-flex items-center justify-center ${
+                                u.active
+                                  ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
+                                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              }`}
+                              title={u.active ? 'השהה משתמש' : 'הפעל משתמש'}
+                            >
+                              {u.active ? '⏸️' : '▶️'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUser(idx)}
+                              className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition text-sm shadow-2xs inline-flex items-center justify-center"
+                              title="מחק משתמש מהמערכת"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -2386,30 +2533,61 @@ export default function AdminDashboard({
             </div>
 
             <div className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  שם מלא של המשתמש:
-                </label>
-                <input
-                  type="text"
-                  value={editUserName}
-                  onChange={(e) => setEditUserName(e.target.value)}
-                  placeholder="למשל: דניאל כהן"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-purple-400 outline-none"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    שם מלא של המשתמש:
+                  </label>
+                  <input
+                    type="text"
+                    value={editUserName}
+                    onChange={(e) => setEditUserName(e.target.value)}
+                    placeholder="למשל: דניאל כהן"
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-purple-400 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    שם משתמש (FirstName.LastName):
+                  </label>
+                  <input
+                    type="text"
+                    value={editUserUsername}
+                    onChange={(e) => setEditUserUsername(e.target.value)}
+                    placeholder="Shalom.kopla"
+                    dir="ltr"
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono text-left focus:ring-2 focus:ring-purple-400 outline-none"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  כתובת אימייל (חשבון Google):
-                </label>
-                <input
-                  type="email"
-                  value={editUserEmail}
-                  onChange={(e) => setEditUserEmail(e.target.value)}
-                  placeholder="user@example.com"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-purple-400 outline-none font-mono"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    סיסמה להתחברות:
+                  </label>
+                  <input
+                    type="text"
+                    value={editUserPassword}
+                    onChange={(e) => setEditUserPassword(e.target.value)}
+                    placeholder="123456"
+                    dir="ltr"
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono text-left focus:ring-2 focus:ring-purple-400 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    כתובת אימייל (חשבון Google / אופציונלי):
+                  </label>
+                  <input
+                    type="email"
+                    value={editUserEmail}
+                    onChange={(e) => setEditUserEmail(e.target.value)}
+                    placeholder="user@example.com"
+                    dir="ltr"
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono text-left focus:ring-2 focus:ring-purple-400 outline-none"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

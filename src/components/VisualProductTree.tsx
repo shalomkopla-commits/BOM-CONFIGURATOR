@@ -19,10 +19,10 @@ export default function VisualProductTree({
   catalogRules,
   onOpenCustomModal,
 }: VisualProductTreeProps) {
-  const [zoom, setZoom] = useState<number>(1);
-  const handleZoomIn = () => setZoom((prev) => Math.min(Number((prev + 0.15).toFixed(2)), 1.6));
-  const handleZoomOut = () => setZoom((prev) => Math.max(Number((prev - 0.15).toFixed(2)), 0.55));
-  const handleZoomReset = () => setZoom(1);
+  const [zoom, setZoom] = useState<number>(0.85);
+  const handleZoomIn = () => setZoom((prev) => Math.min(Number((prev + 0.15).toFixed(2)), 1.5));
+  const handleZoomOut = () => setZoom((prev) => Math.max(Number((prev - 0.15).toFixed(2)), 0.45));
+  const handleZoomReset = () => setZoom(0.85);
 
   const sysObj = systemTypes.find((s) => s.id === order.systemTypeId);
   const sysImageUrl = getItemImageUrl(
@@ -125,16 +125,16 @@ export default function VisualProductTree({
           <li>
             {/* Root Node: System */}
             <div
-              className={`inline-block bg-slate-900 text-white rounded-2xl p-4 shadow-xl border-2 ${
+              className={`inline-block bg-slate-900 text-white rounded-xl p-3 shadow-lg border-2 ${
                 hasCustom ? 'border-orange-500' : 'border-blue-500'
-              } w-80 text-right relative`}
+              } w-64 text-right relative`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] uppercase tracking-wider bg-blue-600/30 text-blue-200 px-2 py-0.5 rounded font-mono">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[9px] uppercase tracking-wider bg-blue-600/30 text-blue-200 px-1.5 py-0.5 rounded font-mono">
                   ROOT SYSTEM • {order.systemTypeId}
                 </span>
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
                     hasCustom
                       ? 'bg-orange-500 text-white'
                       : 'bg-emerald-500 text-white'
@@ -143,19 +143,19 @@ export default function VisualProductTree({
                   {order.status}
                 </span>
               </div>
-              <div className="bg-slate-800 rounded-xl p-2 mb-2.5 flex justify-center border border-slate-700 overflow-hidden">
+              <div className="bg-slate-800 rounded-lg p-1.5 mb-2 flex justify-center border border-slate-700 overflow-hidden">
                 <img
                   src={sysImageUrl}
                   alt={order.systemName}
-                  className="w-52 h-32 object-cover rounded-lg"
+                  className="w-full h-20 object-cover rounded"
                 />
               </div>
-              <div className="font-bold text-sm mb-0.5">{order.systemName}</div>
-              <div className="text-[11px] text-slate-300">
+              <div className="font-bold text-xs mb-0.5">{order.systemName}</div>
+              <div className="text-[10px] text-slate-300">
                 הזמנה: <strong className="font-mono">{order.id}</strong> |{' '}
                 {order.customer}
               </div>
-              <div className="mt-2 pt-2 border-t border-slate-700 flex flex-wrap justify-between gap-1 text-[11px] text-slate-300">
+              <div className="mt-1.5 pt-1.5 border-t border-slate-700 flex flex-wrap justify-between gap-1 text-[10px] text-slate-300">
                 <span>⚡ {order.power}</span>
                 <span>🔭 {order.focal}</span>
                 <span>🔌 {order.voltage}</span>
@@ -203,11 +203,11 @@ export default function VisualProductTree({
                           return (
                             <li key={asm.id}>
                               <div
-                                className={`inline-block w-64 rounded-xl p-3 text-right shadow-md transition hover:shadow-lg ${asmCardStyle}`}
+                                className={`inline-block w-48 rounded-xl p-2.5 text-right shadow-sm transition hover:shadow-md ${asmCardStyle}`}
                               >
-                                <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center justify-between mb-1">
                                   <span
-                                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                                    className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
                                       asm.removed
                                         ? 'bg-red-200 text-red-900 line-through'
                                         : asm.isCustom
@@ -217,13 +217,13 @@ export default function VisualProductTree({
                                   >
                                     {asm.sku}
                                   </span>
-                                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                                  <span className="text-[9px] font-bold text-slate-600 bg-slate-100 px-1 py-0.5 rounded">
                                     כמות: {asm.qty}
                                   </span>
                                 </div>
 
                                 <div
-                                  className={`rounded-lg p-1.5 mb-2 flex justify-center border overflow-hidden ${
+                                  className={`rounded-lg p-1 mb-1.5 flex justify-center border overflow-hidden ${
                                     asm.isCustom
                                       ? 'bg-orange-100/70 border-orange-300'
                                       : 'bg-slate-900 border-slate-200'
@@ -232,26 +232,27 @@ export default function VisualProductTree({
                                   <img
                                     src={resolveRowImg(asm)}
                                     alt={asm.desc}
-                                    className="w-48 h-28 object-cover rounded"
+                                    className="w-full h-16 object-cover rounded"
                                   />
                                 </div>
 
                                 <div
-                                  className={`font-bold text-xs mb-1 ${
+                                  className={`font-bold text-[11px] mb-0.5 leading-snug line-clamp-2 ${
                                     asm.removed
                                       ? 'text-red-900 line-through'
                                       : asm.isCustom
                                       ? 'text-orange-950'
                                       : 'text-slate-800'
                                   }`}
+                                  title={asm.desc}
                                 >
                                   {asm.desc}
                                 </div>
-                                <div className="text-[11px] text-slate-500 mb-1.5">
+                                <div className="text-[10px] text-slate-500 mb-1">
                                   מהדורה: <strong>{asm.rev}</strong>
                                 </div>
 
-                                <div className="text-[10px]">
+                                <div className="text-[9px]">
                                   {asm.removed ? (
                                     <span className="inline-block bg-red-600 text-white px-2 py-0.5 rounded font-bold">
                                       🚫 הוסר ע&quot;י רכש
@@ -298,7 +299,7 @@ export default function VisualProductTree({
                                     return (
                                       <li key={sub.id}>
                                         <div
-                                          className={`inline-block w-56 rounded-xl p-2.5 text-right shadow-sm transition hover:shadow-md ${subCardStyle}`}
+                                          className={`inline-block w-44 rounded-xl p-2 text-right shadow-sm transition hover:shadow-md ${subCardStyle}`}
                                         >
                                           <div className="flex items-center justify-between mb-1">
                                             <span
@@ -327,7 +328,7 @@ export default function VisualProductTree({
                                             <img
                                               src={resolveRowImg(sub)}
                                               alt={sub.desc}
-                                              className="w-40 h-24 object-cover rounded"
+                                              className="w-full h-14 object-cover rounded"
                                             />
                                           </div>
 
@@ -343,7 +344,7 @@ export default function VisualProductTree({
                                             {sub.desc}
                                           </div>
                                           <div className="text-[10px] text-slate-500 mb-1">
-                                            תת-מכלול | {sub.rev}
+                                            מהדורה: {sub.rev}
                                           </div>
 
                                           <div className="text-[10px]">

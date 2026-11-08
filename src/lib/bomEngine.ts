@@ -5,7 +5,7 @@ import {
   Order,
   SystemType,
 } from '@/types/configurator';
-import { getItemImageUrl } from '@/data/initialData';
+import { cleanSubAssemblyDesc, getItemImageUrl } from '@/data/initialData';
 
 export function getNowTimestamp(): string {
   const now = new Date();
@@ -167,6 +167,7 @@ export function buildDynamicBomForOrder(
           (isCustomUsage || (sub.matchUsage && sub.matchUsage.includes(u)));
 
         const subRowId = `B${rowIndex++}`;
+        const cleanDesc = cleanSubAssemblyDesc(sub.desc);
         if (!subMatch) {
           bom.push({
             id: subRowId,
@@ -175,7 +176,7 @@ export function buildDynamicBomForOrder(
             parentId: parentRowId,
             sku: `CUSTOM-${sub.sku}`,
             rev: 'TBD (פיתוח)',
-            desc: `${sub.desc} (${isCustomFocal ? f : 'התאמה מיוחדת'})`,
+            desc: `${cleanDesc} (${isCustomFocal ? f : 'התאמה מיוחדת'})`,
             qty: qtyForCat,
             selectionType: 'דרישת פיתוח (Custom)',
             alternatives: ['נדרש תכנון הנדסי ופתיחת מק"ט'],
@@ -187,12 +188,12 @@ export function buildDynamicBomForOrder(
             removed: false,
             lastEditedBy: editedByLabel,
             lastEditedAt: ts,
-            notes: `תת-מכלול דורש התאמה מיוחדת תחת ${chosenRoot.sku}`,
+            notes: `דורש התאמה מיוחדת תחת ${chosenRoot.sku}`,
             imgType: 'custom',
             customImg: getItemImageUrl('CUSTOM-DEV', null, true),
           });
         } else {
-          const altStr = `${sub.sku} – ${sub.desc} (${sub.rev})`;
+          const altStr = `${sub.sku} – ${cleanDesc} (${sub.rev})`;
           bom.push({
             id: subRowId,
             category: cat,
@@ -200,7 +201,7 @@ export function buildDynamicBomForOrder(
             parentId: parentRowId,
             sku: sub.sku,
             rev: sub.rev,
-            desc: sub.desc,
+            desc: cleanDesc,
             qty: qtyForCat,
             selectionType: 'פריט מוגדר',
             alternatives: [altStr],
@@ -213,7 +214,7 @@ export function buildDynamicBomForOrder(
             inactiveSource: sub.active === false,
             lastEditedBy: editedByLabel,
             lastEditedAt: ts,
-            notes: `תת-מכלול משויך ל-${chosenRoot.sku}`,
+            notes: `שייך ל-${chosenRoot.sku}`,
             imgType: sub.imgType || 'sensor',
             customImg: getItemImageUrl(sub.sku, sub.customImg, false),
           });
@@ -232,7 +233,16 @@ export function ensureOrderHasBom(
   categories: string[]
 ): BomRow[] {
   if (order.bom && order.bom.length > 0) {
-    return order.bom;
+    return order.bom.map((b) =>
+      b.level === 'sub-assembly'
+        ? {
+            ...b,
+            desc: cleanSubAssemblyDesc(b.desc),
+            selectedAlt: cleanSubAssemblyDesc(b.selectedAlt),
+            alternatives: (b.alternatives || []).map(cleanSubAssemblyDesc),
+          }
+        : b
+    );
   }
   const sys =
     systemTypes.find((s) => s.id === order.systemTypeId) || systemTypes[0];

@@ -7,7 +7,9 @@ export async function POST(request: Request) {
   if (supabase) {
     await supabase.auth.signOut();
   }
-  return NextResponse.redirect(`${origin}/login`, { status: 302 });
+  const res = NextResponse.redirect(`${origin}/login`, { status: 302 });
+  res.cookies.delete('bom_local_auth');
+  return res;
 }
 
 export async function GET(request: Request) {
@@ -16,6 +18,9 @@ export async function GET(request: Request) {
   if (supabase) {
     await supabase.auth.signOut();
   }
-  return NextResponse.redirect(`${origin}/login`, { status: 302 });
+  const res = NextResponse.redirect(`${origin}/login`, { status: 302 });
+  res.cookies.delete('bom_local_auth');
+  return res;
 }
+
 

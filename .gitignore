@@ -54,3 +54,8 @@ next-env.d.ts
 tools/
 tools/*
 scratch/
+
+
+# base44
+base44/.app.json*
+base44/.types/

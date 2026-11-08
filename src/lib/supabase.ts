@@ -7,7 +7,12 @@ import {
   RecycleBinItem,
   SystemType,
 } from '@/types/configurator';
-import { INITIAL_STATE, INITIAL_USERS } from '@/data/initialData';
+import {
+  INITIAL_STATE,
+  INITIAL_USERS,
+  cleanSubAssemblyDesc,
+  deriveDefaultUsername,
+} from '@/data/initialData';
 
 const STORAGE_KEY = 'bom_configurator_state_v8';
 
@@ -29,12 +34,14 @@ export const supabase = isSupabaseConfigured
 // --- Entity Mappers: TypeScript <-> PostgreSQL Relational Tables ---
 
 function mapDbToRule(r: any): CatalogRule {
+  const parentSku = r.parent_sku || 'ROOT';
+  const rawDesc = r.description || r.desc || '';
   return {
     sku: r.sku,
     rev: r.rev || 'Rev A',
-    desc: r.description || r.desc || '',
+    desc: parentSku !== 'ROOT' ? cleanSubAssemblyDesc(rawDesc) : rawDesc,
     category: r.category,
-    parentSku: r.parent_sku || 'ROOT',
+    parentSku,
     matchPower: Array.isArray(r.match_power) ? r.match_power : [],
     matchFocal: Array.isArray(r.match_focal) ? r.match_focal : [],
     matchVoltage: Array.isArray(r.match_voltage) ? r.match_voltage : [],
@@ -163,10 +170,13 @@ function mapOrderToDb(o: Order) {
 }
 
 function mapDbToUser(u: any): AppUser {
+  const fullName = u.full_name || u.email.split('@')[0];
   return {
     id: u.id,
     email: u.email,
-    fullName: u.full_name || u.email.split('@')[0],
+    username: u.username || deriveDefaultUsername(fullName, u.email),
+    password: u.password || '123456',
+    fullName,
     role: u.role || 'viewer',
     provider: u.provider || 'google',
     active: u.active !== false,
@@ -256,9 +266,10 @@ export async function loadConfiguratorState(): Promise<{
         baseState.orders = ordersResult.data.map(mapDbToOrder);
       }
 
-      // If app_users table has rows, it takes precedence!
+      // If app_users table has rows, it takes precedence, while preserving custom username/password from snapshot!
       if (!usersResult.error && usersResult.data && usersResult.data.length > 0) {
         let maxNum = 100;
+        const snapshotUsers = Array.isArray(baseState.users) ? baseState.users : [];
         const mappedUsers = usersResult.data.map(mapDbToUser);
         mappedUsers.forEach((u: AppUser) => {
           if (u.id.startsWith('USR-')) {
@@ -267,11 +278,20 @@ export async function loadConfiguratorState(): Promise<{
           }
         });
         baseState.users = mappedUsers.map((u: AppUser) => {
-          if (!u.id || !u.id.startsWith('USR-')) {
+          const snapMatch = snapshotUsers.find(
+            (s) => s.email.toLowerCase().trim() === u.email.toLowerCase().trim()
+          );
+          const mergedUser: AppUser = {
+            ...u,
+            username: snapMatch?.username || u.username || deriveDefaultUsername(u.fullName, u.email),
+            password: snapMatch?.password || u.password || '123456',
+            provider: snapMatch?.provider || u.provider || 'google',
+          };
+          if (!mergedUser.id || !mergedUser.id.startsWith('USR-')) {
             maxNum += 1;
-            return { ...u, id: `USR-${maxNum}` };
+            return { ...mergedUser, id: `USR-${maxNum}` };
           }
-          return u;
+          return mergedUser;
         });
       }
 
