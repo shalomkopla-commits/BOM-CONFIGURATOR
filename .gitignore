@@ -59,3 +59,4 @@ scratch/
 # base44
 base44/.app.json*
 base44/.types/
+base44/.app.jsonc
