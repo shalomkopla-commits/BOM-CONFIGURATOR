@@ -33,6 +33,7 @@ import {
   resetConfiguratorState,
   saveConfiguratorState,
   signInWithGoogleOAuth,
+  supabase,
 } from '@/lib/supabase';
 import { exportOrderBomToExcel } from '@/lib/excelExport';
 import VisualProductTree from '@/components/VisualProductTree';
@@ -1116,14 +1117,27 @@ export default function HomePage() {
                 </span>
               </div>
 
-              <a
-                href="/auth/signout"
+              <button
+                type="button"
+                onClick={async () => {
+                  if (supabase) {
+                    try {
+                      await supabase.auth.signOut();
+                    } catch (e) {}
+                  }
+                  try {
+                    localStorage.removeItem('bom_local_auth');
+                    document.cookie =
+                      'bom_local_auth=; path=/; max-age=0; SameSite=Lax';
+                  } catch (e) {}
+                  window.location.href = '/login';
+                }}
                 title="התנתקות מהחשבון"
-                className="text-xs bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800/60 px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1"
+                className="text-xs bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800/60 px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer"
               >
                 <span>🚪</span>
                 <span>התנתק</span>
-              </a>
+              </button>
             </div>
           </div>
         </div>

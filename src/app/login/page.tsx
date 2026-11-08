@@ -16,7 +16,7 @@ function LoginContent() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    const errorQuery = searchParams.get('error');
+    const errorQuery = searchParams?.get('error');
     if (errorQuery) {
       if (errorQuery === 'auth_callback_failed') {
         setErrorMsg('התחברות נכשלה בעת אימות הנתונים מול Google ו-Supabase. אנא נסה שוב.');
