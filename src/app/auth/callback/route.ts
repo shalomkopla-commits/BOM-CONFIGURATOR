@@ -79,8 +79,23 @@ export async function GET(request: Request) {
             .maybeSingle();
 
           if (!existingUser) {
+            // Compute next sequential USR-XXX ID
+            const { data: allUsers } = await supabase
+              .from('app_users')
+              .select('id');
+            let nextNum = 100;
+            if (allUsers) {
+              allUsers.forEach((u: { id?: string }) => {
+                if (u.id && u.id.startsWith('USR-')) {
+                  const num = parseInt(u.id.replace('USR-', ''), 10);
+                  if (!isNaN(num) && num > nextNum) nextNum = num;
+                }
+              });
+            }
+            const nextSeqId = `USR-${nextNum + 1}`;
+
             await supabase.from('app_users').insert({
-              id: user.id,
+              id: nextSeqId,
               email: user.email.toLowerCase(),
               full_name: fullName,
               avatar_url: avatarUrl,

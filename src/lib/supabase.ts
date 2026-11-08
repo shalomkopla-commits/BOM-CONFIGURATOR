@@ -177,15 +177,16 @@ function mapDbToUser(u: any): AppUser {
 }
 
 function mapUserToDb(u: AppUser, fallbackUpdatedBy: string) {
+  const ts = new Date().toISOString();
   return {
     id: u.id,
-    email: u.email,
+    email: u.email.toLowerCase().trim(),
     full_name: u.fullName,
     role: u.role,
     provider: u.provider || 'google',
     active: u.active !== false,
-    created_at: u.createdAt || new Date().toISOString(),
-    last_sign_in_at: u.lastSignInAt || '',
+    created_at: u.createdAt || ts,
+    last_sign_in_at: u.lastSignInAt || ts,
     updated_by: u.updatedBy || fallbackUpdatedBy,
   };
 }
@@ -368,16 +369,32 @@ export async function saveConfiguratorState(
               .upsert(state.orders.map(mapOrderToDb), { onConflict: 'id' })
           : Promise.resolve({ error: null });
 
-      // 5. Sync users
+      // 5. Sync users (upsert on unique email so ID format changes or Google OAuth UUIDs never conflict)
       const usersPromise =
         state.users && state.users.length > 0
           ? supabase
               .from('app_users')
               .upsert(
                 state.users.map((u) => mapUserToDb(u, updatedBy)),
-                { onConflict: 'id' }
+                { onConflict: 'email' }
               )
           : Promise.resolve({ error: null });
+
+      // Handle user deletion cleanup in app_users
+      const userCleanupPromise = (async () => {
+        if (state.users && state.users.length > 0) {
+          const keepEmails = state.users.map((u) => u.email.toLowerCase().trim());
+          const { data } = await supabase.from('app_users').select('email');
+          if (data && data.length > 0) {
+            const toRemove = data
+              .map((x) => x.email.toLowerCase().trim())
+              .filter((em) => !keepEmails.includes(em));
+            if (toRemove.length > 0) {
+              await supabase.from('app_users').delete().in('email', toRemove);
+            }
+          }
+        }
+      })();
 
       // 6. Handle recycle bin cleanup in DB for deleted items
       let cleanupPromise: Promise<any> = Promise.resolve();
@@ -414,14 +431,25 @@ export async function saveConfiguratorState(
         ]);
       }
 
-      await Promise.all([
+      const [
+        stateRes,
+        rulesRes,
+        systemsRes,
+        ordersRes,
+        usersRes,
+      ] = await Promise.all([
         statePromise,
         rulesPromise,
         systemsPromise,
         ordersPromise,
         usersPromise,
         cleanupPromise,
+        userCleanupPromise,
       ]);
+
+      if (usersRes?.error) {
+        console.error('Supabase users sync error:', usersRes.error);
+      }
 
       return { syncedToSupabase: true };
     } catch (err) {
