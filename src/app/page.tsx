@@ -2315,8 +2315,7 @@ export default function HomePage() {
                           <tr>
                             <th className="py-2 px-3">תמונה</th>
                             <th className="py-2 px-3">קטגוריה</th>
-                            <th className="py-2 px-3">מק&quot;ט ו-Rev</th>
-                            <th className="py-2 px-3">תיאור מכלול / רכיב</th>
+                            <th className="py-2 px-3">מכלול</th>
                             <th className="py-2 px-3 text-center">כמות</th>
                             <th className="py-2 px-3">אופן בחירה</th>
                             <th className="py-2 px-3">
@@ -2352,20 +2351,24 @@ export default function HomePage() {
                                 🖥️ מערכת על (Root)
                               </div>
                             </td>
-                            <td className="py-2 px-3 font-mono font-bold text-blue-900 whitespace-nowrap">
-                              <div>{currentOrder.systemTypeId || 'SYS-STD-100'}</div>
-                              <span className="text-[10px] bg-blue-100 border border-blue-300 px-1.5 py-0.5 rounded text-blue-700">
-                                Rev A
-                              </span>
-                            </td>
-                            <td className="py-2 px-3 font-bold text-slate-900">
-                              <div className="flex items-center gap-1.5">
-                                <span>{currentOrder.systemName}</span>
-                                <div className="relative group/tip inline-flex items-center">
+                            <td className="py-2 px-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex flex-col text-right">
+                                  <span className="font-bold text-xs text-slate-900 leading-snug">
+                                    {currentOrder.systemName}
+                                  </span>
+                                  <span className="font-mono text-[11px] text-blue-900 font-bold leading-tight mt-0.5">
+                                    {currentOrder.systemTypeId || 'SYS-STD-100'}
+                                  </span>
+                                  <span className="text-[10px] text-blue-700 font-mono leading-tight mt-0.5">
+                                    Rev A
+                                  </span>
+                                </div>
+                                <div className="relative group/tip inline-flex items-center shrink-0 pt-0.5">
                                   <span className="cursor-pointer text-slate-400 hover:text-blue-600 text-xs select-none">
                                     ℹ️
                                   </span>
-                                  <div className="absolute z-50 top-full mt-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-lg shadow-xl p-2.5 w-56 pointer-events-none border border-slate-700 text-right font-normal">
+                                  <div className="absolute z-50 top-full mt-1.5 left-0 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-lg shadow-xl p-2.5 w-56 pointer-events-none border border-slate-700 text-right font-normal">
                                     <div className="font-bold text-amber-300 pb-1 mb-1 border-b border-slate-700">
                                       מפרט מערכת בסיס
                                     </div>
@@ -2494,35 +2497,44 @@ export default function HomePage() {
                                     </div>
                                   )}
                                 </td>
-                                <td
-                                  className={`py-2 px-3 font-mono font-bold whitespace-nowrap ${
-                                    isRemoved
-                                      ? 'line-through text-red-700'
-                                      : b.isCustom
-                                      ? 'text-orange-900'
-                                      : 'text-slate-800'
-                                  }`}
-                                >
-                                  <div>{b.sku}</div>
-                                  <span className="text-[10px] bg-slate-100 border border-slate-200 px-1.5 py-0.2 rounded text-slate-600 font-normal">
-                                    {b.rev}
-                                  </span>
-                                </td>
-                                <td
-                                  className={`py-2 px-3 ${
-                                    isSub ? 'pr-3' : ''
-                                  } ${
-                                    isRemoved
-                                      ? 'line-through text-red-800'
-                                      : b.isCustom
-                                      ? 'font-bold text-orange-950'
-                                      : 'font-medium text-slate-900'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-1.5">
-                                    <span>{b.desc}</span>
+                                <td className={`py-2 px-3 ${isSub ? 'pr-3' : ''}`}>
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex flex-col text-right">
+                                      <span
+                                        className={`text-xs leading-snug ${
+                                          isRemoved
+                                            ? 'line-through text-red-800'
+                                            : b.isCustom
+                                            ? 'font-bold text-orange-950'
+                                            : 'font-semibold text-slate-900'
+                                        }`}
+                                      >
+                                        {b.desc}
+                                      </span>
+                                      <span
+                                        className={`font-mono text-[11px] leading-tight mt-0.5 ${
+                                          isRemoved
+                                            ? 'line-through text-red-600'
+                                            : b.isCustom
+                                            ? 'text-orange-900 font-bold'
+                                            : 'text-slate-600 font-medium'
+                                        }`}
+                                      >
+                                        {b.sku}
+                                      </span>
+                                      <span
+                                        className={`text-[10px] font-mono leading-tight mt-0.5 ${
+                                          isRemoved
+                                            ? 'line-through text-red-400'
+                                            : 'text-slate-500'
+                                        }`}
+                                      >
+                                        {b.rev || 'Rev A'}
+                                      </span>
+                                    </div>
+
                                     {(b.notes || isRemoved || b.inactiveSource) && (
-                                      <div className="relative group/tip inline-flex items-center">
+                                      <div className="relative group/tip inline-flex items-center shrink-0 pt-0.5">
                                         <span
                                           className={`cursor-pointer text-xs select-none ${
                                             isRemoved
@@ -2534,7 +2546,7 @@ export default function HomePage() {
                                         >
                                           {isRemoved ? '🚫' : b.inactiveSource ? '⏸️' : 'ℹ️'}
                                         </span>
-                                        <div className="absolute z-50 top-full mt-1.5 right-1/2 translate-x-1/2 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-lg shadow-xl p-2.5 w-60 pointer-events-none border border-slate-700 text-right font-normal">
+                                        <div className="absolute z-50 top-full mt-1.5 left-0 hidden group-hover/tip:flex flex-col bg-slate-900 text-white text-[11px] rounded-lg shadow-xl p-2.5 w-60 pointer-events-none border border-slate-700 text-right font-normal">
                                           {isRemoved && (
                                             <div className="font-bold text-red-400 pb-0.5">
                                               פריט סומן כהוסר ע&quot;י רכש
