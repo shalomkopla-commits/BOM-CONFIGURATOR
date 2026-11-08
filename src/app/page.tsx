@@ -2358,10 +2358,7 @@ export default function HomePage() {
                                     {currentOrder.systemName}
                                   </span>
                                   <span className="font-mono text-[11px] text-blue-900 font-bold leading-tight mt-0.5">
-                                    {currentOrder.systemTypeId || 'SYS-STD-100'}
-                                  </span>
-                                  <span className="text-[10px] text-blue-700 font-mono leading-tight mt-0.5">
-                                    Rev A
+                                    {currentOrder.systemTypeId || 'SYS-STD-100'} (Rev A)
                                   </span>
                                 </div>
                                 <div className="relative group/tip inline-flex items-center shrink-0 pt-0.5">
@@ -2520,16 +2517,7 @@ export default function HomePage() {
                                             : 'text-slate-600 font-medium'
                                         }`}
                                       >
-                                        {b.sku}
-                                      </span>
-                                      <span
-                                        className={`text-[10px] font-mono leading-tight mt-0.5 ${
-                                          isRemoved
-                                            ? 'line-through text-red-400'
-                                            : 'text-slate-500'
-                                        }`}
-                                      >
-                                        {b.rev || 'Rev A'}
+                                        {b.sku} ({b.rev || 'Rev A'})
                                       </span>
                                     </div>
 
