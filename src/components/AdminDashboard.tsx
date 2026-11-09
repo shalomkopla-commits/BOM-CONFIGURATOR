@@ -113,7 +113,7 @@ export default function AdminDashboard({
         i !== editingUserIdx &&
         (u.email.toLowerCase() === emailTrim ||
           (u.username || deriveDefaultUsername(u.fullName, u.email)).toLowerCase() ===
-            usernameTrim.toLowerCase())
+          usernameTrim.toLowerCase())
     );
     if (duplicate) {
       alert('שם משתמש או כתובת אימייל אלו כבר קיימים עבור משתמש אחר במערכת.');
@@ -207,16 +207,16 @@ export default function AdminDashboard({
       nextCustomers = nextCustomers.map((c) =>
         c.id === editingCustId
           ? {
-              ...c,
-              name: nameTrim,
-              contact: contactTrim,
-              phone: custPhone.trim() || undefined,
-              email: custEmail.trim().toLowerCase() || undefined,
-              address: custAddress.trim() || undefined,
-              notes: custNotes.trim() || undefined,
-              active: custActive,
-              updatedAt: nowStr,
-            }
+            ...c,
+            name: nameTrim,
+            contact: contactTrim,
+            phone: custPhone.trim() || undefined,
+            email: custEmail.trim().toLowerCase() || undefined,
+            address: custAddress.trim() || undefined,
+            notes: custNotes.trim() || undefined,
+            active: custActive,
+            updatedAt: nowStr,
+          }
           : c
       );
 
@@ -225,14 +225,14 @@ export default function AdminDashboard({
         nextOrders = nextOrders.map((o) =>
           o.customer === oldName
             ? {
-                ...o,
-                customer: nameTrim,
-                contact: contactTrim,
-                email: custEmail.trim() || o.email,
-                phone: custPhone.trim() || o.phone,
-                updatedAt: getNowTimestamp(),
-                updatedBy: currentUserLabel,
-              }
+              ...o,
+              customer: nameTrim,
+              contact: contactTrim,
+              email: custEmail.trim() || o.email,
+              phone: custPhone.trim() || o.phone,
+              updatedAt: getNowTimestamp(),
+              updatedBy: currentUserLabel,
+            }
             : o
         );
       }
@@ -271,10 +271,10 @@ export default function AdminDashboard({
     const nextCustomers = customers.map((c) =>
       c.id === id
         ? {
-            ...c,
-            active: c.active === false ? true : false,
-            updatedAt: new Date().toLocaleDateString('he-IL'),
-          }
+          ...c,
+          active: c.active === false ? true : false,
+          updatedAt: new Date().toLocaleDateString('he-IL'),
+        }
         : c
     );
     onUpdateState({ customers: nextCustomers });
@@ -465,10 +465,10 @@ export default function AdminDashboard({
     const imgType: ImgType = ruleCategory.includes('אופטי')
       ? 'optics'
       : ruleCategory.includes('ספק')
-      ? 'power'
-      : ruleCategory.includes('מארז')
-      ? 'board'
-      : 'sensor';
+        ? 'power'
+        : ruleCategory.includes('מארז')
+          ? 'board'
+          : 'sensor';
 
     const newRule: CatalogRule = {
       sku: skuTrim,
@@ -731,9 +731,8 @@ export default function AdminDashboard({
         skuOrId: r.sku,
         rev: r.rev || 'Rev A',
         name: r.desc,
-        categoryOrDetails: `קטגוריה: ${r.category} | היררכיה: ${
-          r.parentSku === 'ROOT' ? 'מכלול ראשי' : 'תחת ' + r.parentSku
-        }`,
+        categoryOrDetails: `קטגוריה: ${r.category} | היררכיה: ${r.parentSku === 'ROOT' ? 'מכלול ראשי' : 'תחת ' + r.parentSku
+          }`,
         deletedBy: currentUserLabel,
         deletedAt: ts,
         deleteReason: reason,
@@ -785,7 +784,7 @@ export default function AdminDashboard({
         (r) =>
           r.sku.toLowerCase() === payload.sku.toLowerCase() &&
           (r.rev || 'Rev A').toLowerCase() ===
-            (payload.rev || 'Rev A').toLowerCase()
+          (payload.rev || 'Rev A').toLowerCase()
       );
       if (exists) {
         alert(
@@ -934,55 +933,50 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('rules')}
-            className={`px-3.5 py-2 rounded-lg font-bold transition ${
-              activeTab === 'rules'
+            className={`px-3.5 py-2 rounded-lg font-bold transition ${activeTab === 'rules'
                 ? 'bg-purple-600 text-white'
                 : 'text-slate-300 hover:text-white'
-            }`}
+              }`}
           >
             א. מכלולים וחוקי בחירה
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('systems')}
-            className={`px-3.5 py-2 rounded-lg font-bold transition ${
-              activeTab === 'systems'
+            className={`px-3.5 py-2 rounded-lg font-bold transition ${activeTab === 'systems'
                 ? 'bg-purple-600 text-white'
                 : 'text-slate-300 hover:text-white'
-            }`}
+              }`}
           >
             ב. סוגי מערכות
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('compat')}
-            className={`px-3.5 py-2 rounded-lg font-bold transition ${
-              activeTab === 'compat'
+            className={`px-3.5 py-2 rounded-lg font-bold transition ${activeTab === 'compat'
                 ? 'bg-purple-600 text-white'
                 : 'text-slate-300 hover:text-white'
-            }`}
+              }`}
           >
             ג. התאמות בין רכיבים
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('workflow')}
-            className={`px-3.5 py-2 rounded-lg font-bold transition ${
-              activeTab === 'workflow'
+            className={`px-3.5 py-2 rounded-lg font-bold transition ${activeTab === 'workflow'
                 ? 'bg-purple-600 text-white'
                 : 'text-slate-300 hover:text-white'
-            }`}
+              }`}
           >
             ד. 🔄 תרשים זרימה – מהטופס ל-BOM
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('recycle')}
-            className={`px-3.5 py-2 rounded-lg font-bold transition flex items-center gap-1.5 ${
-              activeTab === 'recycle'
+            className={`px-3.5 py-2 rounded-lg font-bold transition flex items-center gap-1.5 ${activeTab === 'recycle'
                 ? 'bg-purple-600 text-white'
                 : 'text-slate-300 hover:text-white'
-            }`}
+              }`}
           >
             <span>ה. 🗑️ סל מיחזור</span>
             <span className="bg-red-600 text-white text-[10px] px-1.5 py-0.2 rounded-full">
@@ -992,11 +986,10 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('users')}
-            className={`px-3.5 py-2 rounded-lg font-bold transition flex items-center gap-1.5 ${
-              activeTab === 'users'
+            className={`px-3.5 py-2 rounded-lg font-bold transition flex items-center gap-1.5 ${activeTab === 'users'
                 ? 'bg-purple-600 text-white'
                 : 'text-slate-300 hover:text-white'
-            }`}
+              }`}
           >
             <span>ו. 👥 ניהול משתמשים</span>
             <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.2 rounded-full">
@@ -1006,11 +999,10 @@ export default function AdminDashboard({
           <button
             type="button"
             onClick={() => setActiveTab('customers')}
-            className={`px-3.5 py-2 rounded-lg font-bold transition flex items-center gap-1.5 ${
-              activeTab === 'customers'
+            className={`px-3.5 py-2 rounded-lg font-bold transition flex items-center gap-1.5 ${activeTab === 'customers'
                 ? 'bg-purple-600 text-white'
                 : 'text-slate-300 hover:text-white'
-            }`}
+              }`}
           >
             <span>ז. 🏢 ניהול לקוחות</span>
             <span className="bg-emerald-600 text-white text-[10px] px-1.5 py-0.2 rounded-full">
@@ -1328,13 +1320,11 @@ export default function AdminDashboard({
                           return (
                             <tr
                               key={`${r.sku}-${r.rev}`}
-                              className={`${
-                                isChild
+                              className={`${isChild
                                   ? 'bg-blue-50/40 border-r-4 border-r-blue-400 hover:bg-blue-100/40'
                                   : 'hover:bg-purple-50/30'
-                              } ${
-                                !isActive ? 'opacity-65 bg-slate-100/80' : ''
-                              } transition`}
+                                } ${!isActive ? 'opacity-65 bg-slate-100/80' : ''
+                                } transition`}
                             >
                               {/* 1. Image with Zoom-in on hover */}
                               <td className="py-2 px-2 w-12 text-center whitespace-nowrap">
@@ -1366,9 +1356,8 @@ export default function AdminDashboard({
 
                               {/* 2. SKU and Rev (Offset for sub-assembly) */}
                               <td
-                                className={`py-2 px-2 font-mono text-slate-800 whitespace-nowrap w-28 ${
-                                  isChild ? 'pr-5' : ''
-                                }`}
+                                className={`py-2 px-2 font-mono text-slate-800 whitespace-nowrap w-28 ${isChild ? 'pr-5' : ''
+                                  }`}
                               >
                                 {isChild ? (
                                   <div className="flex items-center gap-1">
@@ -1381,11 +1370,10 @@ export default function AdminDashboard({
                                   <div className="font-bold text-xs text-slate-900">{r.sku}</div>
                                 )}
                                 <span
-                                  className={`text-[9.5px] px-1 py-0.2 rounded font-normal block w-fit mt-0.5 ${
-                                    isChild
+                                  className={`text-[9.5px] px-1 py-0.2 rounded font-normal block w-fit mt-0.5 ${isChild
                                       ? 'bg-blue-50 text-blue-700 border border-blue-200 mr-3'
                                       : 'bg-slate-100 text-slate-600 border border-slate-200'
-                                  }`}
+                                    }`}
                                 >
                                   {r.rev || 'Rev A'}
                                 </span>
@@ -1509,11 +1497,10 @@ export default function AdminDashboard({
                                     <button
                                       type="button"
                                       onClick={() => handleToggleRuleActive(idx)}
-                                      className={`p-1 rounded-md border transition text-xs shadow-2xs cursor-pointer ${
-                                        isActive
+                                      className={`p-1 rounded-md border transition text-xs shadow-2xs cursor-pointer ${isActive
                                           ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
                                           : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
-                                      }`}
+                                        }`}
                                     >
                                       {isActive ? '⏸️' : '▶️'}
                                     </button>
@@ -2495,9 +2482,8 @@ export default function AdminDashboard({
                     return (
                       <tr
                         key={u.id}
-                        className={`hover:bg-slate-50 transition ${
-                          !u.active ? 'opacity-60 bg-slate-100' : ''
-                        }`}
+                        className={`hover:bg-slate-50 transition ${!u.active ? 'opacity-60 bg-slate-100' : ''
+                          }`}
                       >
                         <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2.5">
@@ -2544,17 +2530,16 @@ export default function AdminDashboard({
                               };
                               onUpdateState({ users: nextUsers });
                             }}
-                            className={`border-2 rounded-lg px-2.5 py-1 font-bold text-xs bg-white shadow-sm ${
-                              u.role === 'manager'
+                            className={`border-2 rounded-lg px-2.5 py-1 font-bold text-xs bg-white shadow-sm ${u.role === 'manager'
                                 ? 'border-purple-400 text-purple-900'
                                 : u.role === 'procurement'
-                                ? 'border-emerald-400 text-emerald-900'
-                                : u.role === 'sales'
-                                ? 'border-blue-400 text-blue-900'
-                                : u.role === 'dev'
-                                ? 'border-orange-400 text-orange-900'
-                                : 'border-slate-300 text-slate-700'
-                            }`}
+                                  ? 'border-emerald-400 text-emerald-900'
+                                  : u.role === 'sales'
+                                    ? 'border-blue-400 text-blue-900'
+                                    : u.role === 'dev'
+                                      ? 'border-orange-400 text-orange-900'
+                                      : 'border-slate-300 text-slate-700'
+                              }`}
                           >
                             <option value="viewer">
                               👁️ צופה (שירות לקוחות / ייצור)
@@ -2627,11 +2612,10 @@ export default function AdminDashboard({
                                 };
                                 onUpdateState({ users: nextUsers });
                               }}
-                              className={`p-1.5 rounded-lg transition text-sm shadow-2xs inline-flex items-center justify-center ${
-                                u.active
+                              className={`p-1.5 rounded-lg transition text-sm shadow-2xs inline-flex items-center justify-center ${u.active
                                   ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
                                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
-                              }`}
+                                }`}
                               title={u.active ? 'השהה משתמש' : 'הפעל משתמש'}
                             >
                               {u.active ? '⏸️' : '▶️'}
@@ -3090,9 +3074,8 @@ export default function AdminDashboard({
                       return (
                         <tr
                           key={c.id}
-                          className={`hover:bg-slate-50 transition ${
-                            !isActive ? 'bg-red-50/40 opacity-70' : ''
-                          }`}
+                          className={`hover:bg-slate-50 transition ${!isActive ? 'bg-red-50/40 opacity-70' : ''
+                            }`}
                         >
                           <td className="py-2.5 px-3 font-mono font-bold text-purple-700">
                             {c.id}
@@ -3119,11 +3102,10 @@ export default function AdminDashboard({
                           </td>
                           <td className="py-2.5 px-3 text-center">
                             <span
-                              className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
-                                linkedOrdersCount > 0
+                              className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${linkedOrdersCount > 0
                                   ? 'bg-blue-100 text-blue-800 border border-blue-200'
                                   : 'bg-slate-100 text-slate-500'
-                              }`}
+                                }`}
                             >
                               {linkedOrdersCount} הזמנות
                             </span>
@@ -3177,11 +3159,10 @@ export default function AdminDashboard({
                                 <button
                                   type="button"
                                   onClick={() => handleToggleCustomerActive(c.id)}
-                                  className={`p-1.5 rounded-lg border transition text-sm shadow-2xs cursor-pointer ${
-                                    isActive
+                                  className={`p-1.5 rounded-lg border transition text-sm shadow-2xs cursor-pointer ${isActive
                                       ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
                                       : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
-                                  }`}
+                                    }`}
                                 >
                                   {isActive ? '⏸️' : '▶️'}
                                 </button>
