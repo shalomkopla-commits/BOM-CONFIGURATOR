@@ -898,7 +898,7 @@ export default function AdminDashboard({
             <span
               key={item}
               title={tip}
-              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap shadow-2xs cursor-default ${colorClass}`}
+              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-semibold border whitespace-nowrap shadow-2xs cursor-default leading-tight ${colorClass}`}
             >
               {label}
             </span>
