@@ -26,6 +26,23 @@ function LoginContent() {
         setErrorMsg(`התחברות נכשלה: ${decodeURIComponent(errorQuery)}`);
       }
     }
+
+    // If user is already authenticated and didn't arrive via explicit logout query, redirect to /
+    const isLogout = searchParams?.get('logout');
+    if (!isLogout && typeof window !== 'undefined') {
+      const rawAuth =
+        window.localStorage.getItem('bom_auth_user') ||
+        window.localStorage.getItem('bom_pending_google_login');
+      if (rawAuth) {
+        try {
+          const parsed = JSON.parse(rawAuth);
+          if (parsed && parsed.email) {
+            window.location.replace('/');
+            return;
+          }
+        } catch {}
+      }
+    }
   }, [searchParams]);
 
   const handleGoogleOAuthLogin = async () => {
@@ -117,17 +134,16 @@ function LoginContent() {
         matchedUser.email
       )}; path=/; max-age=86400; SameSite=Lax`;
 
-      window.localStorage.setItem(
-        'bom_pending_google_login',
-        JSON.stringify({
-          email: matchedUser.email,
-          fullName: matchedUser.fullName,
-          role: matchedUser.role,
-        })
-      );
+      const authData = JSON.stringify({
+        email: matchedUser.email,
+        fullName: matchedUser.fullName,
+        role: matchedUser.role,
+      });
 
-      router.push('/');
-      router.refresh();
+      window.localStorage.setItem('bom_auth_user', authData);
+      window.localStorage.setItem('bom_pending_google_login', authData);
+
+      window.location.href = '/';
     } catch (err) {
       setCredLoading(false);
       setErrorMsg(`שגיאה באימות המשתמש: ${String(err)}`);

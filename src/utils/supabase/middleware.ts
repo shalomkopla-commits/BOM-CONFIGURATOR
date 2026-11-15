@@ -64,7 +64,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (isAuthenticated && pathname.startsWith('/login')) {
+  const isLogout = Boolean(request.nextUrl.searchParams.get('logout'));
+  if (isAuthenticated && !isLogout && pathname.startsWith('/login')) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);

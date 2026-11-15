@@ -46,10 +46,8 @@ export default function HomePage() {
   >('seed');
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
-  const [role, setRole] = useState<RoleType>('procurement');
-  const [activeUserEmail, setActiveUserEmail] = useState<string>(
-    'ronit.levi@company.com'
-  );
+  const [role, setRole] = useState<RoleType>('viewer');
+  const [activeUserEmail, setActiveUserEmail] = useState<string>('');
   const [googleModalOpen, setGoogleModalOpen] = useState<boolean>(false);
   const [googleInputEmail, setGoogleInputEmail] = useState<string>('');
   const [googleInputName, setGoogleInputName] = useState<string>('');
@@ -57,7 +55,7 @@ export default function HomePage() {
 
   const [activeScreen, setActiveScreen] = useState<
     'list' | 'new' | 'detail' | 'admin'
-  >('detail');
+  >('list');
   const [selectedOrderId, setSelectedOrderId] =
     useState<string>('ORD-2026-102');
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState<boolean>(false);
@@ -205,6 +203,16 @@ export default function HomePage() {
       persistState({ ...appState, users: nextUsers });
       setActiveUserEmail(updatedUser.email);
       setRole(updatedUser.role);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(
+          'bom_auth_user',
+          JSON.stringify({
+            email: updatedUser.email,
+            fullName: updatedUser.fullName,
+            role: updatedUser.role,
+          })
+        );
+      }
       if (updatedUser.role !== 'manager' && activeScreen === 'admin') {
         setActiveScreen('list');
       }
@@ -230,6 +238,16 @@ export default function HomePage() {
       persistState({ ...appState, users: nextUsers });
       setActiveUserEmail(newUser.email);
       setRole('viewer');
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(
+          'bom_auth_user',
+          JSON.stringify({
+            email: newUser.email,
+            fullName: newUser.fullName,
+            role: newUser.role,
+          })
+        );
+      }
       if (activeScreen === 'admin') {
         setActiveScreen('list');
       }
@@ -275,59 +293,123 @@ export default function HomePage() {
         return u;
       });
 
-      // Check real Supabase Auth Google user or pending local /login session
+      // Check real Supabase Auth Google user or local session
       const supaUser = await getAuthenticatedGoogleUser();
-      let pendingLogin: { email: string; fullName: string; role?: string } | null = supaUser;
+      let pendingLogin: { email: string; fullName?: string; role?: string } | null = supaUser;
 
       if (!pendingLogin && typeof window !== 'undefined') {
-        const rawPending = window.localStorage.getItem('bom_pending_google_login');
+        const rawPending =
+          window.localStorage.getItem('bom_auth_user') ||
+          window.localStorage.getItem('bom_pending_google_login');
         if (rawPending) {
           try {
             pendingLogin = JSON.parse(rawPending);
-            window.localStorage.removeItem('bom_pending_google_login');
           } catch {
             // ignore
           }
         }
+
+        if (!pendingLogin) {
+          const cookieMatch = document.cookie.match(
+            /(?:^|;\s*)bom_local_auth=([^;]+)/
+          );
+          if (cookieMatch) {
+            try {
+              const emailFromCookie = decodeURIComponent(cookieMatch[1]);
+              if (emailFromCookie && emailFromCookie.includes('@')) {
+                pendingLogin = {
+                  email: emailFromCookie,
+                  fullName: emailFromCookie.split('@')[0],
+                };
+              }
+            } catch {}
+          }
+        }
       }
 
-      if (pendingLogin && pendingLogin.email) {
-        const emailLower = pendingLogin.email.toLowerCase();
-        const ts = getNowTimestamp();
-        const existingIdx = hydratedUsers.findIndex(
-          (u) => u.email.toLowerCase() === emailLower
-        );
-        if (existingIdx >= 0) {
-          const existing = hydratedUsers[existingIdx];
-          hydratedUsers[existingIdx] = { ...existing, lastSignInAt: ts };
-          setActiveUserEmail(existing.email);
-          setRole(existing.role);
-          if (existing.role === 'manager') {
-            setActiveScreen('admin');
+      // If user is NOT authenticated, redirect immediately to /login
+      if (!pendingLogin || !pendingLogin.email) {
+        if (typeof window !== 'undefined') {
+          window.location.replace('/login');
+        }
+        return;
+      }
+
+      const emailLower = pendingLogin.email.toLowerCase().trim();
+      const ts = getNowTimestamp();
+      const existingIdx = hydratedUsers.findIndex(
+        (u) => u.email.toLowerCase() === emailLower
+      );
+
+      if (existingIdx >= 0) {
+        const existing = hydratedUsers[existingIdx];
+        if (existing.active === false) {
+          alert('משתמש זה מושהה כעת ע"י מנהל המערכת.');
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem('bom_auth_user');
+            window.localStorage.removeItem('bom_pending_google_login');
+            document.cookie =
+              'bom_local_auth=; path=/; max-age=0; SameSite=Lax';
+            window.location.replace('/login');
           }
+          return;
+        }
+
+        hydratedUsers[existingIdx] = { ...existing, lastSignInAt: ts };
+        setActiveUserEmail(existing.email);
+        setRole(existing.role);
+        if (existing.role === 'manager') {
+          setActiveScreen('admin');
         } else {
-          // New Google user -> auto-assign 'viewer' (צופה)
-          const newUser: AppUser = {
-            id: `USR-${100 + hydratedUsers.length + 1}`,
-            email: emailLower,
-            fullName: pendingLogin.fullName || emailLower.split('@')[0],
-            role: (pendingLogin.role as RoleType) || 'viewer',
-            provider: 'google',
-            active: true,
-            createdAt: ts,
-            lastSignInAt: ts,
-            updatedBy: 'Google Sign-In (הוגדר אוטומטית כצופה)',
-          };
-          hydratedUsers = [newUser, ...hydratedUsers];
-          setActiveUserEmail(newUser.email);
-          setRole(newUser.role);
-          if (newUser.role === 'manager') {
-            setActiveScreen('admin');
-          }
-          setAuthBannerMsg(
-            `משתמש Google מחובר: ${newUser.fullName} (${newUser.email}) בתפקיד: ${ROLE_LABELS_HE[newUser.role]}`
+          setActiveScreen('list');
+        }
+
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(
+            'bom_auth_user',
+            JSON.stringify({
+              email: existing.email,
+              fullName: existing.fullName,
+              role: existing.role,
+            })
           );
         }
+      } else {
+        // New Google user -> auto-assign 'viewer' (צופה)
+        const newUser: AppUser = {
+          id: `USR-${maxSeq + 1}`,
+          email: emailLower,
+          fullName: pendingLogin.fullName || emailLower.split('@')[0],
+          role: (pendingLogin.role as RoleType) || 'viewer',
+          provider: 'google',
+          active: true,
+          createdAt: ts,
+          lastSignInAt: ts,
+          updatedBy: 'Google Sign-In (הוגדר אוטומטית כצופה)',
+        };
+        hydratedUsers = [newUser, ...hydratedUsers];
+        setActiveUserEmail(newUser.email);
+        setRole(newUser.role);
+        if (newUser.role === 'manager') {
+          setActiveScreen('admin');
+        } else {
+          setActiveScreen('list');
+        }
+
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(
+            'bom_auth_user',
+            JSON.stringify({
+              email: newUser.email,
+              fullName: newUser.fullName,
+              role: newUser.role,
+            })
+          );
+        }
+
+        setAuthBannerMsg(
+          `משתמש Google מחובר: ${newUser.fullName} (${newUser.email}) בתפקיד: ${ROLE_LABELS_HE[newUser.role]}`
+        );
       }
 
       setAppState({ ...state, orders: hydratedOrders, users: hydratedUsers });
@@ -956,6 +1038,25 @@ export default function HomePage() {
     [currentOrderBom]
   );
 
+  if (!isLoaded) {
+    return (
+      <div
+        dir="rtl"
+        className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-slate-100"
+      >
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl space-y-4">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <h2 className="text-base font-bold text-slate-100">
+            מאמת פרטי התחברות...
+          </h2>
+          <p className="text-xs text-slate-400">
+            אנא המתן, בודק הרשאות ומעביר למערכת
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`min-h-screen flex flex-col transition-colors duration-200 ${
@@ -1126,11 +1227,13 @@ export default function HomePage() {
                     } catch (e) {}
                   }
                   try {
+                    localStorage.removeItem('bom_auth_user');
+                    localStorage.removeItem('bom_pending_google_login');
                     localStorage.removeItem('bom_local_auth');
                     document.cookie =
                       'bom_local_auth=; path=/; max-age=0; SameSite=Lax';
                   } catch (e) {}
-                  window.location.href = '/login';
+                  window.location.href = '/login?logout=1';
                 }}
                 title="התנתקות מהחשבון"
                 className="text-xs bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800/60 px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer"
@@ -1185,15 +1288,9 @@ export default function HomePage() {
 
       {/* MAIN WORKSPACE */}
       <main className="flex-1 max-w-[1640px] w-full mx-auto px-6 py-6 space-y-6">
-        {!isLoaded ? (
-          <div className="bg-white rounded-xl p-12 text-center text-slate-500 shadow-sm border border-slate-200">
-            טוען נתוני מערכת...
-          </div>
-        ) : (
-          <>
-            {/* =================================================================
-                SCREEN 1: ORDERS LIST DASHBOARD
-               ================================================================= */}
+        {/* =================================================================
+            SCREEN 1: ORDERS LIST DASHBOARD
+           ================================================================= */}
             {activeScreen === 'list' && (
               <section className="space-y-5">
                 {/* KPI Cards */}
@@ -3223,8 +3320,6 @@ export default function HomePage() {
                 }}
               />
             )}
-          </>
-        )}
 
         {/* Google Sign-In Modal */}
         {googleModalOpen && (
